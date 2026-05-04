@@ -1,0 +1,2229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>FPV PLATFORM — La référence des pilotes FPV France</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --bg:#0d1117; --s1:#141921; --s2:#1a2030; --s3:#202840;
+  --b1:#252e42; --b2:#2e3a52;
+  --t1:#f0ece4; --t2:#a8b8cc; --t3:#6a7a96;
+  --red:#e8321c; --ok:#1adb6b; --warn:#f5a300; --bad:#e8321c;
+  --fd:'Bebas Neue',sans-serif;
+  --fm:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--t1);font-family:var(--fm);font-size:13px;line-height:1.65;overflow-x:hidden}
+button{cursor:pointer;font-family:inherit;background:none;border:none;color:inherit}
+input,textarea{font-family:inherit}
+a{color:var(--t1);text-decoration-color:var(--b2)}
+a:hover{color:var(--red)}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--b2)}
+
+/* LAYOUT */
+#wrap{display:flex;min-height:100vh}
+#side{width:196px;background:var(--s1);border-right:1px solid var(--b1);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:100;overflow-y:auto}
+#main{margin-left:196px;flex:1;padding:32px 40px 50px;max-width:100%;min-height:100vh}
+.view{display:none}
+.view.active{display:block;animation:fu .22s ease}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* SIDEBAR */
+.logo-wrap{padding:28px 22px 22px;border-bottom:1px solid var(--b1)}
+.logo-main{font-family:var(--fd);font-size:36px;letter-spacing:5px;line-height:1}
+.logo-sub{font-size:8px;letter-spacing:6px;color:var(--t3);margin-top:4px;text-transform:uppercase}
+.logo-status{display:flex;align-items:center;gap:7px;margin-top:14px}
+.s-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:pulse 2.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.s-dot-txt{font-size:9px;letter-spacing:2px;color:var(--t3);text-transform:uppercase}
+.nav-list{flex:1;padding:8px 0}
+.nav-item{display:flex;width:100%;align-items:center;padding:0;cursor:pointer;border:none;background:none;position:relative}
+.nav-bar{width:2px;height:100%;position:absolute;left:0;top:0;background:transparent}
+.nav-item.active .nav-bar{background:var(--red)}
+.nav-inner{padding:10px 22px;display:flex;align-items:center;gap:10px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);transition:color .12s;width:100%}
+.nav-item:hover .nav-inner{color:var(--t1)}
+.nav-item.active .nav-inner{color:var(--t1)}
+.nav-em{font-size:15px;flex-shrink:0}
+.side-foot{padding:18px 22px;border-top:1px solid var(--b1);font-size:9px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;line-height:2.2}
+
+/* TOPBAR */
+#topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:36px;padding-bottom:20px;border-bottom:1px solid var(--b1)}
+.tb-title{font-family:var(--fd);font-size:22px;letter-spacing:4px;color:var(--t3)}
+.tb-r{display:flex;align-items:center;gap:14px}
+.tb-date{font-size:9px;letter-spacing:3px;color:var(--t3);text-transform:uppercase}
+.tb-tag{font-size:9px;letter-spacing:3px;color:var(--red);padding:4px 10px;border:1px solid var(--red);text-transform:uppercase}
+
+/* SECTION HEADER */
+.sh{margin-bottom:30px}
+.sh h2{font-family:var(--fd);font-size:42px;letter-spacing:3px;line-height:1;margin-bottom:6px}
+.sh p{font-size:10px;letter-spacing:1px;color:var(--t3)}
+
+/* CARD */
+.card{background:var(--s1);border:1px solid var(--b1);padding:22px}
+.card-sm{background:var(--s1);border:1px solid var(--b1);padding:14px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;font-family:var(--fm);font-size:10px;letter-spacing:2px;text-transform:uppercase;transition:all .15s;border:1px solid transparent}
+.btn-red{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-red:hover{background:#c52818}
+.btn-ghost{background:none;color:var(--t1);border-color:var(--b2)}
+.btn-ghost:hover{border-color:var(--t1)}
+.btn-ghost-red{background:none;color:var(--red);border-color:var(--red)}
+.btn-ghost-red:hover{background:var(--red);color:#fff}
+.btn:disabled{opacity:.28;cursor:default;pointer-events:none}
+.btn-sm{padding:6px 12px;font-size:9px}
+.btn-xs{padding:4px 10px;font-size:9px}
+
+/* INPUTS */
+.inp{background:var(--s2);border:1px solid var(--b1);padding:10px 14px;font-size:12px;color:var(--t1);outline:none;width:100%;transition:border-color .15s;font-family:var(--fm)}
+.inp:focus{border-color:var(--t2)}
+.inp::placeholder{color:var(--t3)}
+
+/* TAGS */
+.tag{display:inline-block;padding:2px 8px;font-size:9px;letter-spacing:2px;text-transform:uppercase;border:1px solid currentColor}
+.tag-red{color:var(--red)}
+.tag-ok{color:var(--ok)}
+.tag-warn{color:var(--warn)}
+.tag-dim{color:var(--t3)}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.flex{display:flex;align-items:center}
+.fw{flex-wrap:wrap}
+.gap6{gap:6px}.gap10{gap:10px}.gap14{gap:14px}
+.mb10{margin-bottom:10px}.mb16{margin-bottom:16px}.mb24{margin-bottom:24px}
+
+/* DIVIDER */
+.div{height:1px;background:var(--b1);margin:18px 0}
+
+/* LABELS */
+.label{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--t3);display:block;margin-bottom:8px}
+
+/* PROGRESS */
+.prog{height:1px;background:var(--b1);margin:12px 0;overflow:hidden}
+.prog-fill{height:100%;transition:width .4s ease}
+
+/* INFO BOXES */
+.info{padding:12px 16px;font-size:12px;line-height:1.7;border-left:2px solid currentColor}
+.info.ok{color:var(--ok);background:rgba(26,219,107,.05);border-color:var(--ok)}
+.info.bad{color:var(--red);background:rgba(232,50,28,.05);border-color:var(--red)}
+.info.warn{color:var(--warn);background:rgba(245,163,0,.05);border-color:var(--warn)}
+.info.dim{color:var(--t3);background:var(--s2);border-color:var(--b2)}
+
+/* CHECKLIST */
+.cat-title{font-family:var(--fd);font-size:22px;letter-spacing:2px;color:var(--t3);margin:22px 0 8px}
+.chk{display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;border-bottom:1px solid var(--b1);transition:background .1s}
+.chk:last-child{border-bottom:none}
+.chk:hover{background:var(--s2)}
+.chk.done{background:rgba(26,219,107,.04)}
+.chk-box{width:18px;height:18px;border:1px solid var(--b2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:11px}
+.chk-box.done{border-color:var(--ok);background:var(--ok);color:#000;font-weight:700}
+.chk-txt{flex:1;font-size:12px;transition:color .15s}
+.chk-txt.done{color:var(--t3);text-decoration:line-through}
+.chk-crit{color:var(--red);font-size:11px;flex-shrink:0}
+.score-big{font-family:var(--fd);font-size:80px;line-height:1}
+
+/* WEATHER */
+.wx-card{background:var(--s1);border:1px solid var(--b1);padding:14px;text-align:center}
+.wx-val{font-family:var(--fd);font-size:26px;letter-spacing:1px;margin:4px 0}
+.wx-sub{font-size:9px;letter-spacing:2px;text-transform:uppercase}
+
+/* SIMULATORS */
+.sim{background:var(--s1);border:1px solid var(--b1);display:flex;flex-direction:column}
+.sim-top{border-left:3px solid currentColor;padding:20px;border-bottom:1px solid var(--b1)}
+.sim-score{font-family:var(--fd);font-size:52px;line-height:1}
+.sim-body{padding:20px;flex:1;display:flex;flex-direction:column;gap:14px}
+.li-pro{list-style:none;padding:0}
+.li-pro li{padding:3px 0 3px 14px;font-size:11px;color:var(--t2);position:relative}
+.li-pro li::before{position:absolute;left:0}
+.li-pro li.p::before{content:'+';color:var(--ok)}
+.li-pro li.c::before{content:'−';color:var(--red)}
+.yt-btn{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--s2);border:1px solid var(--b2);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);text-decoration:none;transition:all .15s;margin-top:auto}
+.yt-btn:hover{border-color:var(--t1);color:var(--t1)}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--b1);margin-bottom:24px;gap:0}
+.tab{padding:10px 20px;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--t3);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab:hover{color:var(--t2)}
+.tab.active{color:var(--t1);border-bottom-color:var(--red)}
+
+/* QUIZ */
+.q-opt{display:block;width:100%;text-align:left;padding:13px 18px;margin-bottom:6px;background:var(--s1);border:1px solid var(--b1);font-size:12px;color:var(--t2);transition:all .15s}
+.q-opt:hover{border-color:var(--t2);color:var(--t1)}
+
+/* ACCORDION */
+.acc{background:var(--s1);border:1px solid var(--b1);margin-bottom:6px}
+.acc-h{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;cursor:pointer;width:100%;text-align:left;background:none;border:none}
+.acc-h-title{font-family:var(--fd);font-size:24px;letter-spacing:2px}
+.acc-arr{font-size:18px;color:var(--t3);transition:transform .2s;line-height:1}
+.acc-arr.open{transform:rotate(90deg)}
+.acc-body{display:none;border-top:1px solid var(--b1)}
+.acc-body.open{display:block}
+.acc-sub{border-bottom:1px solid var(--b1)}
+.acc-sub:last-child{border-bottom:none}
+.acc-sh{padding:11px 20px;cursor:pointer;width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;background:none;border:none}
+.acc-sh-txt{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2)}
+.acc-sb{display:none;padding:16px 20px;background:var(--s2)}
+.acc-sb.open{display:block}
+.acc-sb p{font-size:12px;color:var(--t2);line-height:1.85;white-space:pre-line;margin-bottom:4px}
+
+/* WIZARD STEPS */
+.step-bar{display:flex;gap:0;margin-bottom:28px;align-items:center}
+.step-seg{flex:1;height:1px;background:var(--b1);position:relative}
+.step-seg.done{background:var(--ok)}
+.step-node{width:20px;height:20px;border:1px solid var(--b2);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:9px;position:absolute;right:-10px;top:-10px;z-index:1;transition:all .2s}
+.step-seg.done .step-node{border-color:var(--ok);background:var(--ok);color:#000;font-weight:700}
+.step-seg.current .step-node{border-color:var(--red);color:var(--red)}
+
+/* TYPE SELECTOR */
+.type-opt{background:var(--s1);border:1px solid var(--b1);padding:24px 20px;cursor:pointer;text-align:center;transition:border-color .15s}
+.type-opt:hover{border-color:var(--t2)}
+.type-opt-icon{font-size:32px;margin-bottom:10px}
+.type-opt h3{font-family:var(--fd);font-size:26px;letter-spacing:2px;margin-bottom:5px}
+.type-opt p{font-size:11px;color:var(--t3);line-height:1.5}
+
+/* BUILD */
+.brow{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--b1);flex-wrap:wrap;gap:6px}
+.brow:last-child{border-bottom:none}
+.bcat{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);display:block;margin-bottom:2px}
+.bnote{font-size:10px;color:var(--t3);margin-left:6px}
+.bprice{font-family:var(--fd);font-size:22px;letter-spacing:1px;white-space:nowrap}
+.btotal{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-top:2px solid var(--t1)}
+
+/* SPOTS */
+.spot{background:var(--s1);border:1px solid var(--b1);padding:18px;cursor:pointer;transition:border-color .15s;margin-bottom:6px}
+.spot:hover,.spot.open{border-color:var(--t2)}
+.spot-detail{display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--b1)}
+.stags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.filter-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.fbtn{padding:5px 14px;font-size:9px;letter-spacing:2px;text-transform:uppercase;border:1px solid var(--b2);color:var(--t3);background:none;transition:all .15s}
+.fbtn:hover{border-color:var(--t2);color:var(--t2)}
+.fbtn.active{border-color:var(--t1);color:var(--t1)}
+
+/* CHAT */
+#chat-area{background:var(--s1);border:1px solid var(--b1);padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;height:430px;margin-bottom:10px}
+.msg-user{align-self:flex-end;background:var(--red);color:#fff;padding:10px 16px;max-width:82%;font-size:12px;line-height:1.75;white-space:pre-wrap;word-break:break-word}
+.msg-bot{align-self:flex-start;background:var(--s2);border:1px solid var(--b1);color:var(--t2);padding:10px 16px;max-width:82%;font-size:12px;line-height:1.75;white-space:pre-wrap;word-break:break-word}
+.quick-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.q-quick{padding:5px 12px;font-size:9px;letter-spacing:2px;text-transform:uppercase;border:1px solid var(--b1);color:var(--t3);transition:all .15s}
+.q-quick:hover{border-color:var(--t2);color:var(--t2)}
+.chat-row{display:flex;gap:8px}
+.chat-send{background:var(--red);color:#fff;border:none;padding:10px 18px;font-size:16px;flex-shrink:0;transition:background .15s}
+.chat-send:hover{background:#c52818}
+.chat-send:disabled{background:var(--b2);cursor:default}
+.t-dots span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--t3);margin:0 2px;animation:td .9s infinite}
+.t-dots span:nth-child(2){animation-delay:.2s}
+.t-dots span:nth-child(3){animation-delay:.4s}
+@keyframes td{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+/* WEATHER MAP */
+#wx-france-map{width:100%;height:340px;border:1px solid var(--b1);display:block;margin-bottom:16px;border-radius:0}
+.wx-map-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3)}
+.wx-map-leg{display:flex;align-items:center;gap:6px}
+.wx-map-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* AUTOCOMPLETE */
+.ac-wrap{position:relative;flex:1;min-width:140px}
+#ac-list{position:absolute;top:100%;left:0;right:0;background:var(--s1);border:1px solid var(--b2);border-top:none;z-index:500;max-height:180px;overflow-y:auto;display:none}
+.ac-item{padding:9px 14px;font-size:12px;color:var(--t2);cursor:pointer;border-bottom:1px solid var(--b1);transition:background .1s}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item.selected{background:var(--s2);color:var(--t1)}
+#carte-map,#spots-map{width:100%;border:1px solid var(--b1);display:block}
+#carte-map{height:520px}
+#spots-map{height:420px;margin-bottom:16px}
+.leaflet-container{background:#0e0e0e!important}
+.leaflet-control-zoom a{background:var(--s1)!important;color:var(--t1)!important;border-color:var(--b2)!important}
+.leaflet-popup-content-wrapper{background:var(--s1)!important;border:1px solid var(--b1)!important;color:var(--t1)!important;border-radius:0!important;box-shadow:0 4px 20px rgba(0,0,0,.8)!important}
+.leaflet-popup-tip{background:var(--s1)!important}
+.leaflet-popup-content{font-family:var(--fm)!important;font-size:12px!important;color:var(--t1)!important;margin:12px 14px!important}
+.fpv-tt{background:var(--s1)!important;border:1px solid var(--b2)!important;color:var(--t2)!important;border-radius:0!important;font-family:var(--fm)!important;font-size:10px!important;letter-spacing:1px!important;text-transform:uppercase!important;padding:4px 8px!important}
+.map-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.map-leg-item{display:flex;align-items:center;gap:6px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3)}
+.map-leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.stab2{display:block}
+.mb10{margin-bottom:10px}
+
+/* MOBILE NAV */
+#mob-nav{display:none}
+#hamburger{display:none;position:fixed;top:14px;left:14px;z-index:300;background:var(--s1);border:1px solid var(--b1);padding:8px 11px;font-size:15px;color:var(--t2)}
+
+@media(max-width:768px){
+  #side{transform:translateX(-220px);box-shadow:20px 0 60px rgba(0,0,0,.9);transition:transform .25s ease}
+  #side.open{transform:translateX(0)}
+  #main{margin-left:0;padding:20px 16px 90px}
+  #hamburger{display:flex}
+  #mob-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--s1);border-top:1px solid var(--b1);z-index:200;overflow-x:auto}
+  .mob-btn{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 12px;background:none;border:none;border-top:2px solid transparent;color:var(--t3);font-size:8px;letter-spacing:1px;text-transform:uppercase;transition:all .12s}
+  .mob-btn.active{color:var(--t1);border-top-color:var(--red)}
+  .mob-btn span:first-child{font-size:17px}
+  .sh h2{font-size:30px}
+  .score-big{font-size:56px}
+  #carte-map{height:340px}
+  #geo-iframe{height:360px!important}
+  #spots-map{height:320px}
+  #chat-area{height:340px}
+  #topbar .tb-title{display:none}
+}
+</style>
+</head>
+<body>
+<div id="wrap">
+
+<nav id="side">
+  <div class="logo-wrap">
+    <div class="logo-main">FPV</div>
+    <div class="logo-sub">Platform France</div>
+    <div class="logo-status">
+      <div class="s-dot"></div>
+      <span class="s-dot-txt">Opérationnel</span>
+    </div>
+  </div>
+  <div class="nav-list" id="nav-list"></div>
+  <div class="side-foot">
+    <div>Version 2.0</div>
+    <div>France · 2024</div>
+  </div>
+</nav>
+
+<button id="hamburger" onclick="toggleSide()">☰</button>
+
+<main id="main">
+
+<div id="topbar">
+  <div class="tb-title">FPV PLATFORM</div>
+  <div class="tb-r">
+    <span class="tb-date" id="tb-date"></span>
+    <span class="tb-tag" id="tb-tag">CARTE FPV</span>
+  </div>
+</div>
+
+<!-- ═══════════════ CARTE ═══════════════ -->
+<div id="view-carte" class="view active">
+  <div class="sh">
+    <h2>CARTE FPV</h2>
+    <p>Vue satellite + zones DGAC officielles — données IGN Géoportail en temps réel</p>
+  </div>
+  <div class="map-bar" style="margin-bottom:10px">
+    <div style="font-size:10px;letter-spacing:1px;color:var(--t3)">Source officielle DGAC — carte interactive complète avec toutes les zones drone France</div>
+    <a href="https://www.geoportail.gouv.fr/carte?c=2.3522,46.8566&z=6&l0=ORTHOIMAGERY.ORTHOPHOTOS::GEOPORTAIL:OGC:WMTS(1)&l1=RESTRICTIONS.DRONES.REGLEMENTAIRES::GEOPORTAIL:OGC:WMTS(0.8)&permalink=yes" target="_blank" class="btn btn-ghost btn-sm" style="margin-left:auto;flex-shrink:0">↗ Plein écran</a>
+  </div>
+  <iframe
+    id="geo-iframe"
+    src="https://www.geoportail.gouv.fr/embed/visu.html?c=2.3522,46.8566&z=6&l0=ORTHOIMAGERY.ORTHOPHOTOS::GEOPORTAIL:OGC:WMTS(1)&l1=RESTRICTIONS.DRONES.REGLEMENTAIRES::GEOPORTAIL:OGC:WMTS(0.8)&permalink=yes"
+    style="width:100%;height:520px;border:1px solid var(--b1);display:block"
+    frameborder="0"
+    allow="geolocation"
+    allowfullscreen
+    title="Géoportail — Zones drones France DGAC officielle">
+  </iframe>
+  <div class="info dim" style="margin-top:10px;font-size:10px">
+    🔴 Rouge = interdit · 🟠 Orange = restreint · 🟢 Vert = autorisé · Zoomez sur votre zone pour voir les détails. Données officielles DGAC mises à jour en temps réel.
+  </div>
+</div>
+
+<!-- ═══════════════ CHECKLIST ═══════════════ -->
+<div id="view-checklist" class="view">
+  <div class="sh">
+    <h2>CHECKLIST</h2>
+    <p>Avant chaque vol — ⚡ points critiques de sécurité</p>
+  </div>
+  <div class="card mb24">
+    <div class="flex" style="justify-content:space-between;margin-bottom:10px">
+      <span class="label" style="margin:0" id="chk-count">0 / 0</span>
+      <span class="score-big" style="font-size:52px" id="chk-pct">0%</span>
+    </div>
+    <div class="prog"><div class="prog-fill" id="chk-bar" style="width:0"></div></div>
+    <div id="chk-result" style="display:none;margin-top:14px"></div>
+  </div>
+  <div id="chk-cats"></div>
+  <div class="flex fw gap10" style="margin-top:6px">
+    <button class="btn btn-red" onclick="evalFlight()" style="flex:1">ÉVALUER MON VOL</button>
+    <button class="btn btn-ghost" onclick="resetChk()">↺ Réinitialiser</button>
+  </div>
+</div>
+
+<!-- ═══════════════ MÉTÉO ═══════════════ -->
+<div id="view-meteo" class="view">
+  <div class="sh">
+    <h2>MÉTÉO FPV</h2>
+    <p>Conditions de vol en temps réel + carte France — Open-Meteo (aucune clé API)</p>
+  </div>
+  <div class="card mb24">
+    <div class="flex gap10 fw">
+      <div class="ac-wrap">
+        <input class="inp" id="wx-inp" placeholder="Ville française…" autocomplete="off"
+          oninput="acInput(this.value)"
+          onkeydown="acKeydown(event)"
+          style="width:100%"/>
+        <div id="ac-list"></div>
+      </div>
+      <button class="btn btn-red" onclick="wxFetch()" id="wx-btn">RECHERCHER</button>
+    </div>
+    <div class="flex fw gap6" style="margin-top:12px">
+      <button class="btn btn-ghost btn-sm" onclick="wxCity('Paris')">Paris</button>
+      <button class="btn btn-ghost btn-sm" onclick="wxCity('Lyon')">Lyon</button>
+      <button class="btn btn-ghost btn-sm" onclick="wxCity('Marseille')">Marseille</button>
+      <button class="btn btn-ghost btn-sm" onclick="wxCity('Bordeaux')">Bordeaux</button>
+      <button class="btn btn-ghost btn-sm" onclick="wxCity('Toulouse')">Toulouse</button>
+      <button class="btn btn-ghost btn-sm" onclick="wxCity('Nantes')">Nantes</button>
+      <button class="btn btn-ghost btn-sm" onclick="wxCity('Lille')">Lille</button>
+      <button class="btn btn-ghost btn-sm" onclick="wxCity('Nice')">Nice</button>
+      <button class="btn btn-ghost btn-sm" onclick="wxCity('Strasbourg')">Strasbourg</button>
+      <button class="btn btn-ghost btn-sm" onclick="wxCity('Rennes')">Rennes</button>
+      <button class="btn btn-ghost btn-sm" onclick="wxCity('Arras')">Arras</button>
+      <button class="btn btn-ghost btn-sm" onclick="wxCity('Calais')">Calais</button>
+    </div>
+  </div>
+
+  <!-- Carte météo France -->
+  <div class="sh" style="margin-bottom:12px">
+    <div class="sh-row"><span class="sh-icon" style="font-size:18px">🗺️</span><h2 class="sh-title" style="font-size:16px">CARTE MÉTÉO FRANCE</h2></div>
+    <div class="sh-sub">Conditions FPV en temps réel sur les grandes villes — cliquer sur un point</div>
+  </div>
+  <div class="wx-map-legend">
+    <div class="wx-map-leg"><div class="wx-map-dot" style="background:#1adb6b"></div>Vol optimal</div>
+    <div class="wx-map-leg"><div class="wx-map-dot" style="background:#f5a300"></div>Vol possible</div>
+    <div class="wx-map-leg"><div class="wx-map-dot" style="background:#e8321c"></div>Déconseillé</div>
+    <div class="wx-map-leg"><div class="wx-map-dot" style="background:#888"></div>Chargement…</div>
+  </div>
+  <div id="wx-france-map"></div>
+  <div class="info dim" style="margin-bottom:20px;font-size:10px">Données Open-Meteo · Mise à jour au chargement · Cliquer sur un marqueur pour voir les détails</div>
+
+  <div id="wx-err" style="display:none;color:var(--red);font-size:12px;margin-bottom:14px"></div>
+  <div id="wx-res" style="display:none">
+    <div class="g2 gap14 mb16">
+      <div class="card" id="wx-score-card" style="text-align:center">
+        <div class="label">Score FPV</div>
+        <div class="score-big" id="wx-score">—</div>
+        <div style="font-family:var(--fd);font-size:16px;letter-spacing:2px;margin-top:4px" id="wx-score-lbl"></div>
+      </div>
+      <div class="card flex gap14">
+        <span id="wx-icon" style="font-size:52px"></span>
+        <div>
+          <div style="font-size:11px;color:var(--t3);margin-bottom:4px" id="wx-desc"></div>
+          <div style="font-family:var(--fd);font-size:40px;letter-spacing:1px" id="wx-temp"></div>
+          <div style="font-size:10px;color:var(--t3);margin-top:4px" id="wx-city-lbl"></div>
+        </div>
+      </div>
+    </div>
+    <div class="g4 gap10 mb16" id="wx-metrics"></div>
+    <div class="card" id="wx-advice"><div class="label">Conseil pilote FPV</div><div id="wx-advice-txt"></div></div>
+  </div>
+  <div id="wx-empty" style="text-align:center;padding:40px 0;color:var(--t3)">
+    <div style="font-size:48px;margin-bottom:12px">🌤️</div>
+    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase">Entrez une ville pour voir les conditions de vol détaillées</div>
+  </div>
+</div>
+
+<!-- ═══════════════ SIMULATEURS ═══════════════ -->
+<div id="view-simulateurs" class="view">
+  <div class="sh">
+    <h2>SIMULATEURS FPV</h2>
+    <p>10 simulateurs analysés — quiz de recommandation personnalisée</p>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-stab="compare">COMPARATIF</button>
+    <button class="tab" data-stab="quiz">QUIZ PROFIL</button>
+  </div>
+  <div id="sim-compare" class="stab"><div class="g2 gap14" id="sim-grid"></div></div>
+  <div id="sim-quiz" class="stab" style="display:none"></div>
+</div>
+
+<!-- ═══════════════ GUIDE ═══════════════ -->
+<div id="view-guide" class="view">
+  <div class="sh">
+    <h2>GUIDE FPV</h2>
+    <p>Du simulateur à la compétition — tout ce qu'il faut savoir</p>
+  </div>
+  <div id="guide-acc"></div>
+  <div class="info dim" style="margin-top:12px;font-size:11px">💬 Une question ? L'assistant IA répond 24/7 dans l'onglet dédié.</div>
+</div>
+
+<!-- ═══════════════ CONFIGURATEUR ═══════════════ -->
+<div id="view-config" class="view">
+  <div class="sh">
+    <h2>CONFIGURATEUR</h2>
+    <p>Génère un build 100% compatible selon ton style et ton budget</p>
+  </div>
+  <div class="flex gap10 mb24" id="cfg-steps"></div>
+  <div id="cfg-content"></div>
+</div>
+
+<!-- ═══════════════ SPOTS ═══════════════ -->
+<div id="view-spots" class="view">
+  <div class="sh">
+    <h2>SPOTS FPV</h2>
+    <p>50+ lieux sélectionnés — dont nombreux dans le Pas-de-Calais / Arras</p>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-stab2="smap">🗺️ CARTE DES SPOTS</button>
+    <button class="tab" data-stab2="slist">📋 LISTE</button>
+  </div>
+  <div id="stab-smap" class="stab2">
+    <div class="map-legend mb10">
+      <div class="map-leg-item"><div class="map-leg-dot" style="background:#e8321c"></div>Freestyle</div>
+      <div class="map-leg-item"><div class="map-leg-dot" style="background:#00aaff"></div>Cinématique</div>
+      <div class="map-leg-item"><div class="map-leg-dot" style="background:#f5a300"></div>Racing</div>
+      <div class="map-leg-item"><div class="map-leg-dot" style="background:#1adb6b"></div>Long Range</div>
+      <div class="map-leg-item"><div class="map-leg-dot" style="background:#888"></div>Multi</div>
+    </div>
+    <div id="spots-map"></div>
+    <div class="info dim" style="margin-top:10px;font-size:10px">Cliquez sur un marqueur pour voir les infos du spot. Satellite ESRI.</div>
+  </div>
+  <div id="stab-slist" class="stab2" style="display:none">
+    <div class="filter-bar" id="spot-filters"></div>
+    <div id="spots-list"></div>
+  </div>
+  <div class="info dim" style="margin-top:12px;font-size:11px">📍 Tu connais un spot ? Partage-le via l'assistant IA — ajout communautaire bientôt disponible.</div>
+</div>
+
+<!-- ═══════════════ IA ═══════════════ -->
+<div id="view-ia" class="view">
+  <div class="sh">
+    <h2>ASSISTANT IA FPV</h2>
+    <p>Expert FPV local — 60+ réponses · 100% gratuit · aucune clé requise</p>
+  </div>
+  <div class="quick-bar" id="quick-bar"></div>
+  <div id="chat-area"></div>
+  <div class="chat-row">
+    <input class="inp" id="chat-inp" placeholder="Pose ta question FPV…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}" style="flex:1"/>
+    <button class="chat-send" id="chat-send-btn" onclick="sendChat()">↑</button>
+  </div>
+  <div style="font-size:9px;color:var(--t3);margin-top:8px;letter-spacing:1px">ASSISTANT LOCAL — AUCUNE API · AUCUN COÛT · DONNÉES EMBARQUÉES</div>
+</div>
+
+</main>
+
+<nav id="mob-nav" id="mob-nav"></nav>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   DATA
+   ════════════════════════════════════════════════════════════ */
+const NAV=[
+  {id:'carte',em:'🗺️',label:'Carte FPV'},
+  {id:'checklist',em:'✅',label:'Checklist'},
+  {id:'meteo',em:'🌦️',label:'Météo FPV'},
+  {id:'simulateurs',em:'🎮',label:'Simulateurs'},
+  {id:'guide',em:'🧠',label:'Guide FPV'},
+  {id:'config',em:'🧩',label:'Configurateur'},
+  {id:'spots',em:'📍',label:'Spots FPV'},
+  {id:'ia',em:'🤖',label:'Assistant IA'},
+];
+
+const CHECKS={
+  '🔋 Matériel':[
+    {id:'bat',l:'Batterie drone chargée (> 3.8V/cell)',c:true},
+    {id:'helice',l:'Hélices intactes et bien serrées',c:true},
+    {id:'frame',l:'Frame inspectée — aucun crack carbone visible',c:false},
+    {id:'cam',l:'Caméra fixée, objectif propre et sec',c:false},
+    {id:'vtx',l:'VTX allumé, fréquence vérifiée',c:false},
+    {id:'goggles',l:'Lunettes chargées, réception testée',c:true},
+    {id:'motors',l:'Moteurs tournent librement, sans vibrations',c:false},
+  ],
+  '📡 Radio & Liaison':[
+    {id:'rc',l:'Radiocommande allumée et chargée',c:true},
+    {id:'bind',l:'Liaison RC vérifiée (LED bind stable)',c:true},
+    {id:'failsafe',l:'Failsafe configuré (disarm ou RTH)',c:true},
+    {id:'modes',l:'Modes de vol testés au sol (Acro / Angle)',c:false},
+    {id:'buzzer',l:'Buzzer ARM/DARM testé',c:false},
+    {id:'range',l:'Test portée radio si vol longue distance',c:false},
+  ],
+  '⚖️ Légalité France':[
+    {id:'at',l:'Drone enregistré AlphaTango (> 800g)',c:true},
+    {id:'assur',l:'Assurance RC valide (RC ou habitation)',c:true},
+    {id:'zone',l:'Zone vérifiée sur Géoportail / app DGAC',c:true},
+    {id:'brev',l:'Brevet théorique validé si requis (A2/STS)',c:false},
+    {id:'signal',l:'Vol signalé si CTR ou zone réglementée',c:false},
+    {id:'vlos',l:'Vol à vue garanti (VLOS) en permanence',c:true},
+  ],
+  '🌬️ Météo & Environnement':[
+    {id:'vent',l:'Vent < 12 m/s, rafales < 15 m/s',c:true},
+    {id:'pluie',l:'Aucune précipitation prévue',c:true},
+    {id:'visib',l:'Visibilité > 5 km',c:false},
+    {id:'nuit',l:'Vol de jour uniquement (sauf dérogation)',c:false},
+    {id:'obs',l:'Zone dégagée, personnes à distance réglementaire',c:true},
+    {id:'temp',l:'Température dans la plage LiPo (> 5°C)',c:false},
+  ],
+};
+
+const WMO={0:{i:'☀️',d:'Ciel dégagé'},1:{i:'🌤️',d:'Principalement dégagé'},2:{i:'⛅',d:'Partiellement nuageux'},3:{i:'☁️',d:'Couvert'},45:{i:'🌫️',d:'Brouillard'},48:{i:'🌫️',d:'Brouillard givrant'},51:{i:'🌦️',d:'Bruine légère'},53:{i:'🌦️',d:'Bruine modérée'},55:{i:'🌧️',d:'Bruine dense'},61:{i:'🌧️',d:'Pluie légère'},63:{i:'🌧️',d:'Pluie modérée'},65:{i:'⛈️',d:'Pluie forte'},71:{i:'🌨️',d:'Neige légère'},80:{i:'🌦️',d:'Averses légères'},95:{i:'⛈️',d:'Orage'},99:{i:'⛈️',d:'Orage + grêle'}};
+
+const SIMS=[
+  {n:'Uncrashed FPV',col:'#e8321c',level:'Débutant → Pro',real:4,price:'16.99€',free:false,plateform:'PC (Steam)',pc:'GTX 970 / 8 Go',score:92,tag:'Meilleur débutants',
+  pros:['Graphismes photoréalistes','Physics freestyle excellentes','Environments très variés','Mise à jour régulières'],
+  cons:['Multi-joueur limité','Moins orienté racing pur','Pas de console'],
+  yt:'https://www.youtube.com/results?search_query=uncrashed+fpv+drone+simulator+gameplay+2024'},
+  {n:'VelociDrone',col:'#ede8df',level:'Expert Racing',real:5,price:'19.99€',free:false,plateform:'PC / Mac',pc:'GTX 1050 / 8 Go',score:93,tag:'Choix des pros racing',
+  pros:['Physics ultra-réalistes','Multi-joueur robuste et stable','Licence officielle DCL/DRL','Track editor pro'],
+  cons:['Graphismes basiques','Très difficile pour débutants','Pas de console'],
+  yt:'https://www.youtube.com/results?search_query=velocidrone+fpv+racing+simulator+gameplay'},
+  {n:'Liftoff',col:'#f5a300',level:'Intermédiaire',real:3,price:'14.99€',free:false,plateform:'PC / Xbox / PS4-5',pc:'GTX 960 / 8 Go',score:82,tag:'Le plus populaire',
+  pros:['Communauté très active','Éditeur de pistes custom','Multi-plateformes (console !)','Bibliothèque drones énorme'],
+  cons:['Physics perfectibles','Interface datée','Moins réaliste que VelociDrone'],
+  yt:'https://www.youtube.com/results?search_query=liftoff+fpv+drone+simulator+gameplay'},
+  {n:'DRL Simulator',col:'#7a7a7a',level:'Débutant → Inter.',real:2,price:'Gratuit',free:true,plateform:'PC (Steam)',pc:'GTX 750 / 6 Go',score:68,tag:'100% gratuit',
+  pros:['Totalement gratuit','Pistes officielles DRL','Progression guidée claire','Bon pour commencer'],
+  cons:['Physics très arcade','Limité pour freestyle','Pas de console'],
+  yt:'https://www.youtube.com/results?search_query=drl+simulator+fpv+drone+gameplay+free'},
+  {n:'Tryp FPV',col:'#1adb6b',level:'Intermédiaire → Pro',real:4,price:'12.99€',free:false,plateform:'PC (Steam)',pc:'GTX 970 / 8 Go',score:85,tag:'Montée en puissance',
+  pros:['Physics freestyle excellentes','Environnements réalistes HD','Prix très accessible','Mises à jour fréquentes'],
+  cons:['Communauté plus petite','Moins de contenu que Liftoff','Multi-joueur en développement'],
+  yt:'https://www.youtube.com/results?search_query=tryp+fpv+drone+racer+simulator+gameplay'},
+  {n:'Orqa FPV.Skydive',col:'#00aaff',level:'Intermédiaire',real:3,price:'19.99€',free:false,plateform:'PC (Steam)',pc:'GTX 1060 / 8 Go',score:75,tag:'Spécialité Orqa',
+  pros:['Graphismes soignés','Plusieurs environments','Compatible lunettes Orqa natif','Bon pour simulation HD'],
+  cons:['Moins de contenu custom','Communauté limitée','Prix élevé pour le contenu'],
+  yt:'https://www.youtube.com/results?search_query=orqa+fpv+skydive+simulator+gameplay'},
+  {n:'FPV Freerider Recharged',col:'#888',level:'Débutant',real:2,price:'4.99€',free:false,plateform:'PC / Mac / Linux / Android',pc:'Très accessible',score:62,tag:'Budget & Mobile',
+  pros:['Prix minime (4.99€)','Fonctionne sur Android !','Léger, tourne partout','Bon pour les bases'],
+  cons:['Graphismes très datés','Physics basiques','Peu de contenu','Non disponible iOS'],
+  yt:'https://www.youtube.com/results?search_query=fpv+freerider+recharged+simulator+gameplay'},
+  {n:'FPV Air 2',col:'#aaa',level:'Débutant → Inter.',real:2,price:'9.99€',free:false,plateform:'PC (Steam)',pc:'GTX 750 / 6 Go',score:60,tag:'Accessible',
+  pros:['Prix abordable','Facile à prendre en main','Différents types de drones','Compatible avec manettes USB'],
+  cons:['Physics peu réalistes','Peu de mise à jour','Communauté quasi-inexistante','Limité pour progresser'],
+  yt:'https://www.youtube.com/results?search_query=fpv+air+2+simulator+steam+gameplay'},
+  {n:'Tiny Whoop GO',col:'#ff9900',level:'Débutant',real:1,price:'Gratuit',free:true,plateform:'iOS / Android',pc:'Smartphone requis',score:55,tag:'100% Mobile',
+  pros:['100% gratuit et mobile','Parfait pour les tout débutants','Tiny Whoop simulation','Très accessible'],
+  cons:['Physics très simplifiées','Téléphone seulement','Limité pour progresser','Pas de manette physique'],
+  yt:'https://www.youtube.com/results?search_query=tiny+whoop+go+fpv+mobile+simulator'},
+  {n:'Hotprops',col:'#ff4444',level:'Expert Racing',real:4,price:'Gratuit (Beta)',free:true,plateform:'PC (Steam)',pc:'GTX 1060 / 8 Go',score:78,tag:'Racing communautaire',
+  pros:['Gratuit en accès anticipé','Physics racing très bonnes','Focus communauté racing','Multi-joueur natif'],
+  cons:['Toujours en beta','Bugs occasionnels','Peu de contenu solo','Uniquement racing'],
+  yt:'https://www.youtube.com/results?search_query=hotprops+fpv+racing+simulator+gameplay'},
+];
+
+const QUIZ_Q=[
+  {id:'goal',q:'Ton objectif principal ?',opts:['🏎️ Racing & compétition','🤸 Freestyle & tricks','🎬 Cinématique & voyage','🎯 Découvrir le FPV']},
+  {id:'level',q:'Ton niveau actuel ?',opts:['🐣 Débutant complet','⏱️ Quelques heures de sim','✈️ Je vole déjà en réel','🏆 Pilote confirmé']},
+  {id:'plateform',q:'Tu joues sur quoi ?',opts:['📱 Téléphone ou tablette','💻 PC ou Mac','🎮 Console (Xbox / PlayStation)','🖥️ PC + mobile les deux']},
+  {id:'budget',q:'Ton budget simulateur ?',opts:['💸 Gratuit uniquement','💶 Moins de 15€','💶 15 à 25€','💰 Le prix importe peu']},
+];
+
+const GUIDE_DATA=[
+  {id:'debuter',t:'Débuter en FPV',subs:[
+    {t:"C'est quoi le FPV ?",b:"Le FPV (First Person View) consiste à piloter un drone en voyant en temps réel ce que capte sa caméra, via des lunettes ou un écran. La sensation est unique : tu es dans le cockpit à plus de 150 km/h. C'est technique, créatif, et profondément addictif."},
+    {t:'Le parcours recommandé',b:"① Simulateur FPV 15-20h minimum (Uncrashed ou DRL Sim)\n② Tiny Whoop indoor (BetaFPV Meteor65 Pro, ~60€)\n③ Premier 5 pouces — construction ou BNF\n④ Rejoindre un club local (ffam.fr)\n⑤ Progresser vers le racing ou le freestyle HD"},
+    {t:'Réglementation France essentielle',b:"• Enregistrement AlphaTango obligatoire si drone > 800g (gratuit)\n• Assurance RC (souvent incluse dans la multirisque habitation)\n• Vérifier les zones sur Géoportail ou app DGAC avant CHAQUE vol\n• Brevet théorique DGAC si catégorie A2 ou STS\n• Limite altitude : 120m AGL en catégorie ouverte\n• Interdiction de vol de nuit sans dérogation préfectorale"},
+  ]},
+  {id:'elrs',t:'Comprendre ELRS',subs:[
+    {t:"ExpressLRS — le protocole qui a tout changé",b:"ExpressLRS est un protocole radio open-source créé par la communauté FPV. Latence < 2ms, portée 30km+ en 900MHz, résistance aux interférences excellente. Aujourd'hui standard de facto en freestyle, racing et long range."},
+    {t:'2.4 GHz vs 900 MHz',b:"• 2.4 GHz : Compact, portée 3-5km, rafraîchissement 250-500Hz. Parfait pour freestyle et racing. Antennes petites et légères.\n• 900 MHz : Portée 20-50km, pénétration obstacles excellente. Idéal long range. Rafraîchissement max 200Hz. Antennes plus grandes."},
+    {t:'Quelle radio choisir en 2024 ?',b:"Budget compact : RadioMaster Pocket ELRS (80€) — meilleur rapport Q/P\nFormat gamepad : RadioMaster Zorro ELRS (110€)\nPro : RadioMaster TX16S MkII (165€) — référence complète\nDouble module : Jumper T20S (190€)\nModule externe : BetaFPV Micro TX Module pour adapter ta radio existante"},
+  ]},
+  {id:'video',t:'Analog vs Digital HD',subs:[
+    {t:'Vidéo Analogique — le classique',b:"Latence quasi nulle (< 1ms), coût très bas, robuste. Image SD (480p) mais ressenti immédiat. Adoré des racers pour son absence de latence.\nLunettes : Fatshark Recon 4 (130€), Skyzone SKY04X Pro (300€)\nVTX : Rush Tank Solo 400mW (28€), TBS Unify Pro32 (45€)"},
+    {t:'Digital HD — la révolution',b:"DJI O3 Air Unit, Walksnail Avatar HD, HDZero — image jusqu'à 1080p60.\nLatence 20-40ms (acceptable hors racing compétitif).\nDJI O3 domine le marché grand public, HDZero pour minimiser la latence en racing, Walksnail excellent rapport qualité/prix."},
+    {t:'Mon conseil selon usage',b:"• Débutant → Analog (économique, résiste aux crashs)\n• Freestyle / Exploration → Walksnail Avatar HD Kit (150€)\n• Cinématique → DJI O3 Air Unit (meilleure image)\n• Racing compétitif → HDZero ou Analog pur\n• Long range → DJI O3 (portée + qualité enregistrement)"},
+  ]},
+  {id:'betaflight',t:'Betaflight & Configuration',subs:[
+    {t:'Betaflight en 2024 — les bases',b:"Betaflight est le firmware open-source qui fait tourner la grande majorité des drones FPV racing et freestyle. Il tourne sur le Flight Controller (FC) et gère tout : PID, modes de vol, mixers, OSD, ports UART.\nTélécharger : betaflight.com/configurator"},
+    {t:'Configuration étape par étape',b:"① Flash le firmware correspondant à ton FC (Betaflight Configurator)\n② Configure les ports UART (ELRS RX sur UART1, GPS sur UART3…)\n③ Calibre l'accéléromètre (gyro à plat, cliquer Calibrate)\n④ Active les modes : Acro requis pour FPV\n⑤ Configure tes rates (Betaflight / Actual Rates)\n⑥ PID : commence par les defaults, ajuste après 10 vols"},
+    {t:'Ressources indispensables',b:"📺 Joshua Bardwell (YouTube) : référence mondiale Betaflight en anglais\n📺 FPV France (YouTube) : tutoriels français de qualité\n💬 r/fpv (Reddit) : communauté internationale\n🇫🇷 FPV France Forum : la meilleure communauté française\n📖 Betaflight Wiki (wiki.betaflight.com) : documentation officielle complète"},
+  ]},
+  {id:'build',t:'Construire son drone',subs:[
+    {t:'Les composants — liste complète',b:"• Frame : structure carbone (3-5mm épaisseur bras pour un 5\")\n• Moteurs × 4 : brushless ex. 2206/2207/2208 selon usage\n• ESC : Electronic Speed Controller — contrôle les moteurs\n• FC (Flight Controller) : le cerveau — tourne Betaflight\n• Caméra FPV + VTX : liaison vidéo en temps réel\n• Récepteur radio (RX ELRS 2.4GHz ou 900MHz)\n• Batterie LiPo 4S ou 6S HV\n• Hélices × 4 + rechanges (bi-pales freestyle, tri-pales racing)"},
+    {t:'Les stacks FC+ESC recommandés 2024',b:"Débutant (80€) : Speedybee F405 V3 Stack 45A — plug & play\nIntermédiaire (95€) : Flywoo GOKU F745 Stack — gyro 8K ultra-précis\nPremium (120€) : Foxeer F722 V4 + ESC 60A — racing spec\nLong Range (98€) : Matek F765-WING — GPS natif intégré"},
+    {t:'Outils nécessaires',b:"• Fer à souder (minimum 60W, recommandé : TS80P ou TS101)\n• Soudure 60/40 et flux\n• Multimètre\n• Jeux de tournevis (T10, T20, T25, cruciforme)\n• Clés Allen 1.5mm / 2mm / 2.5mm\n• Pince à dénuder et câbles silicone AWG16/20/26\n• Fume extractor (ne respirez pas les vapeurs de flux)"},
+  ]},
+];
+
+const BUILDS={
+  freestyle:{
+    entry:{l:'< 350€',t:'Freestyle Entry — 5 pouces 4S',parts:[
+      {c:'Frame',n:'iFlight Nazgul5 Evoque F5D',p:55,note:'HD 5", carbone robuste'},
+      {c:'Stack FC+ESC',n:'Speedybee F405 V3 Stack 45A',p:82,note:'Plug & play, parfait débutant'},
+      {c:'Moteurs ×4',n:'Emax Eco II 2306 2400KV',p:48,note:'4S, rapport qualité/prix imbattable'},
+      {c:'Caméra FPV',n:'Runcam Nano 4 Starlight',p:22,note:'Analog, très lumineuse'},
+      {c:'VTX',n:'Rush Tank Solo 400mW',p:28,note:'IRC Tramp, stable'},
+      {c:'Récepteur RX',n:'ELRS EP1 Nano 2.4GHz',p:18,note:'< 2ms latence'},
+      {c:'Batterie ×2',n:'GNB 1300mAh 4S 100C',p:44,note:'Bon endurance'},
+    ]},
+    mid:{l:'400–700€',t:'Freestyle HD Premium — 5 pouces',parts:[
+      {c:'Frame',n:'Armattan Chameleon Ti 5"',p:95,note:'Lifetime warranty, titane'},
+      {c:'Stack FC+ESC',n:'Flywoo GOKU F745 45A',p:95,note:'Gyro 8K ultra-précis'},
+      {c:'Moteurs ×4',n:'T-Motor Velox V2 2207 1950KV',p:88,note:'4-6S, qualité T-Motor'},
+      {c:'Kit Digital FPV',n:'Walksnail Avatar Nano Kit',p:125,note:'1080p HD, latence faible'},
+      {c:'Récepteur RX',n:'ELRS EP2 Nano Diversity',p:22,note:'2 antennes, robuste'},
+      {c:'Batterie ×2',n:'Tattu R-Line 1550mAh 4S 150C',p:92,note:'Top discharge'},
+    ]},
+  },
+  long_range:{
+    entry:{l:'< 450€',t:'Long Range — 7 pouces Budget',parts:[
+      {c:'Frame 7"',n:'GEPRC Mark5 D7',p:65,note:'Aérodynamique optimisée'},
+      {c:'FC+ESC',n:'Matek F765-WING + 4in1 40A',p:98,note:'GPS intégré natif'},
+      {c:'Moteurs ×4',n:'T-Motor F40 Pro IV 2400KV',p:72,note:'4S, efficience ++'},
+      {c:'GPS Module',n:'GEPRC M10 GPS',p:28,note:'RTH indispensable LR'},
+      {c:'RX 900MHz',n:'ELRS Nano 900MHz',p:25,note:'30km+ de portée'},
+      {c:'Caméra',n:'Runcam Thumb Pro 4K',p:58,note:'Action cam embarquée'},
+      {c:'Batterie',n:'Pack Li-ion 18650 4S2P DIY',p:48,note:'20-30min autonomie'},
+    ]},
+    mid:{l:'500–800€',t:'Long Range HD Premium — 7 pouces',parts:[
+      {c:'Frame 7"',n:'iFlight Chimera7 Pro V2',p:95,note:'Rigide, protection GPS'},
+      {c:'FC+ESC',n:'Holybro Kakute H7 + 4in1 ESC',p:115,note:'Baro, GPS, précis'},
+      {c:'Moteurs ×4',n:'T-Motor Air Gear 450',p:98,note:'Kit optimisé LR 4S'},
+      {c:'GPS+Compass',n:'Here3+ GPS (CAN bus)',p:72,note:'Précision RTK capable'},
+      {c:'RX 900MHz',n:'ELRS Nano 900MHz Diversity',p:32,note:'2 antennes, ultra fiable'},
+      {c:'Kit Digital',n:'DJI O3 Air Unit',p:195,note:'Meilleure image du marché'},
+      {c:'Batterie',n:'Tattu 5200mAh 4S',p:68,note:'35min+ autonomie'},
+    ]},
+  },
+  racing:{
+    entry:{l:'350–600€',t:'Racing — 5 pouces 6S Entry',parts:[
+      {c:'Frame',n:'Armattan Marmotte 5"',p:65,note:'Ultra léger, rigide'},
+      {c:'Stack',n:'Flywoo GOKU F745 Stack',p:85,note:'Gyro rapide, léger'},
+      {c:'Moteurs ×4',n:'XING2 2207 1855KV 6S',p:96,note:'6S = vitesse max'},
+      {c:'Caméra FPV',n:'Runcam Swift 2 Micro',p:30,note:'Angle large, race classic'},
+      {c:'VTX',n:'TBS Unify Pro32 Nano',p:45,note:'Compétition stable'},
+      {c:'Récepteur',n:'TBS Crossfire Nano RX',p:30,note:'Fiable en gate race'},
+      {c:'Batterie ×4',n:'Tattu R-Line 1300mAh 6S 150C',p:168,note:'Racing spec'},
+    ]},
+    mid:{l:'650–1100€',t:'Racing Pro — 5 pouces 6S Premium',parts:[
+      {c:'Frame',n:'Armattan Badger 5" V3',p:85,note:'Rigidité extrême pro'},
+      {c:'Stack',n:'Foxeer F722 V4 + 60A ESC',p:125,note:'BLHELI32, gyro 8K'},
+      {c:'Moteurs ×4',n:'T-Motor F60 Pro IV 6S 1750KV',p:148,note:'Référence racing DCL/DRL'},
+      {c:'Caméra HD',n:'DJI O3 Micro Unit',p:165,note:'HD racing, ultra faible latence'},
+      {c:'Récepteur',n:'TBS Crossfire Micro Diversity',p:45,note:'2 antennes, aucune perte'},
+      {c:'Batterie ×6',n:'Tattu R-Line V5 1300mAh 6S',p:252,note:'Meilleures batteries racing 2024'},
+    ]},
+  },
+  cinematic:{
+    entry:{l:'500–900€',t:'Cinématique HD — DJI O3',parts:[
+      {c:'Frame 5"',n:'GEPRC Mark5 HD',p:78,note:'Optimisé HD, vibrations minimales'},
+      {c:'Stack',n:'Speedybee F405 V3 Stack 45A',p:82,note:'Stable, plug & play'},
+      {c:'Moteurs ×4',n:'T-Motor Velox V2 2207 1950KV',p:88,note:'Doux et précis pour cinéma'},
+      {c:'DJI O3 Air Unit',n:'Kit DJI O3 + lunettes DJI Goggles 2',p:685,note:'Meilleure qualité image HD'},
+      {c:'Récepteur',n:'ELRS EP2 Nano Diversity',p:22,note:'Fiable, léger'},
+      {c:'Batterie ×2',n:'Tattu 1550mAh 4S LiPo',p:55,note:'Autonomie cinéma'},
+    ]},
+  },
+};
+
+const SPOTS=[
+  // FREESTYLE
+  {id:1,n:'Carrières de Cergy',v:'Cergy (95)',t:'Freestyle',legal:true,d:2,desc:"Vaste zone ouverte en semaine, peu de passage. Sol dur en gravier et rochers — prévois des protections pour le crash. Idéal pour débuter en extérieur.",tags:['plein-air','débutant','accès facile','obstacles naturels']},
+  {id:2,n:'Zone industrielle abandonnée — Marignane',v:'Marignane (13)',t:'Freestyle',legal:false,d:3,desc:"Anciens entrepôts industriels, structures métalliques, passages étroits. Terrain parfait pour l'urban freestyle mais zone privée — permission requise.",tags:['urban','freestyle avancé','structures','indoor-outdoor']},
+  {id:3,n:'Carrière de la Butte Chalmont',v:'Oulchy-le-Château (02)',t:'Freestyle',legal:true,d:2,desc:"Ancienne carrière militaire. Paysage lunaire, pierres, niveaux variés. Zone rurale isolée, très peu de passage. Excellent pour le freestyle technique.",tags:['carrière','freestyle','rural','historique']},
+  {id:4,n:'Base aérienne désaffectée de Châteauroux',v:'Châteauroux (36)',t:'Freestyle',legal:true,d:1,desc:"Immense piste désaffectée et hangars. Zone parfaite pour le freestyle et le long range. Vérifier l'accès avec la mairie avant.",tags:['aérodrome','long range','flat','grand espace']},
+  {id:5,n:'Parc du Peuple de l\'Herbe',v:'Châtelaillon (17)',t:'Freestyle',legal:true,d:2,desc:"Zone côtière avec dunes et plages vides hors saison. Vent souvent présent — parfait pour travailler le vol dans le vent.",tags:['côte','vent','hors-saison','atlantique']},
+  {id:6,n:'Viaduc de Garabit — environs',v:'Ruynes-en-Margeride (15)',t:'Freestyle',legal:true,d:3,desc:"Viaduc Eiffel iconique avec gorges en contrebas. Vent violent fréquent, pilotes expérimentés uniquement. Vue à couper le souffle.",tags:['viaduc','gorges','paysage','avancé']},
+  // CINEMATIC
+  {id:7,n:'Lac de Créteil',v:'Créteil (94)',t:'Cinématique',legal:true,d:1,desc:"Plan d'eau urbain très photogénique. Zone autorisée catégorie ouverte. Lumière magnifique à l'aube. Parfait pour l'initiation cinéma.",tags:['eau','urbain','accessible','photo']},
+  {id:8,n:'Gorges du Verdon',v:'La Palud-sur-Verdon (04)',t:'Cinématique',legal:false,d:4,desc:"Les plus belles gorges d'Europe. Vues à 600m de profondeur, couleurs turquoise. Zone protégée Parc Naturel Régional — dérogation préfectorale nécessaire. Uniquement pour pros.",tags:['gorges','montagne','dérogation','spectaculaire']},
+  {id:9,n:'Baie de Somme — Le Crotoy',v:'Le Crotoy (80)',t:'Cinématique',legal:true,d:2,desc:"Estuaire de classe mondiale. Lumière dorée en toutes saisons, flamants roses, reflets de marée. Vent à prévoir. Zone autorisée hors réserve naturelle.",tags:['baie','oiseaux','lumière','atlantique']},
+  {id:10,n:'Lac d\'Annecy',v:'Annecy (74)',t:'Cinématique',legal:false,d:2,desc:"Le plus beau lac d'Europe. Montagnes en arrière-plan, eau turquoise. Zone largement protégée — vérifier précisément les secteurs autorisés sur Géoportail.",tags:['lac','montagnes','alpes','spectaculaire']},
+  {id:11,n:'Camargue — Réserve de Beauduc',v:'Arles (13)',t:'Cinématique',legal:false,d:2,desc:"Paysages de fins du monde — sel, eau rose, flamants. Zone naturelle très protégée. Permission de la réserve requise mais résultat cinéma incomparable.",tags:['naturel','flamants','sel','réserve']},
+  {id:12,n:'Cirque de Gavarnie',v:'Gavarnie (65)',t:'Cinématique',legal:false,d:3,desc:"Site UNESCO, amphithéâtre naturel géant de 1500m de hauteur. Vents violents en altitude. Dérogation préfectorale et coordination refuge requises.",tags:['UNESCO','montagnes','Pyrénées','vent fort']},
+  {id:13,n:'Gorges de l\'Ardèche',v:'Vallon-Pont-d\'Arc (07)',t:'Cinématique',legal:false,d:2,desc:"Falaises calcaires et Arche Naturelle de Pont-d'Arc. Zone classée — autorisation Réserve Naturelle Régionale requise. Très beau spot cinéma.",tags:['gorges','falaises','rivière','dérogation']},
+  {id:14,n:'Étang de Berre — Crau',v:'Istres (13)',t:'Cinématique',legal:true,d:1,desc:"Vaste étang provençal avec chaînes montagneuses en fond. Plaine de la Crau adjacente idéale pour le long range. Peu de contraintes aériennes dans le secteur autorisé.",tags:['étang','Provence','plaine','long range']},
+  // RACING
+  {id:15,n:'FPV Club Île-de-France — Pontoise',v:'Cergy-Pontoise (95)',t:'Racing',legal:true,d:1,desc:"Club FPV organisé, piste balisée régulièrement installée. Événements mensuels. Contacter le club avant sur les réseaux.",tags:['club','piste','organisé','IDF']},
+  {id:16,n:'Circuit Buggy Club Sarthe',v:'Le Mans (72)',t:'Racing',legal:true,d:2,desc:"Piste buggies reconvertie pour FPV racing. Événements organisés régulièrement. Ambiance racing très sympa, contact asso avant.",tags:['racing','club','piste balisée','Sarthe']},
+  {id:17,n:'Autodrome de Linas-Montlhéry',v:'Montlhéry (91)',t:'Racing',legal:true,d:2,desc:"Légendaire autodrome avec anneau de vitesse. Événements FPV organisés ponctuellement par clubs affiliés FFAM. Prévoir la coordination.",tags:['autodrome','histoire','racing','FFAM']},
+  {id:18,n:'Club FPV Bordeaux — Aéroclub Canéjan',v:'Bordeaux (33)',t:'Racing',legal:true,d:1,desc:"Club très actif en Gironde. Piste racing et zone freestyle. Accueil débutants les week-ends. Rejoindre leur groupe Facebook.",tags:['club','débutants bienvenus','Bordeaux','FFAM']},
+  {id:19,n:'Aéromodélisme Club Toulouse — Lasbordes',v:'Toulouse (31)',t:'Racing',legal:true,d:1,desc:"Un des meilleurs clubs du Sud-Ouest. Zone dédiée FPV, initiations régulières. Terrain parfait, accueil excellent.",tags:['club','Toulouse','organisation','débutants']},
+  // LONG RANGE
+  {id:20,n:'Plaine de la Beauce',v:'Chartres (28)',t:'Long Range',legal:true,d:1,desc:"Immense plaine agricole sans obstacles. Dégagement visuel 15km+. La zone rêvée pour le long range. Altitude basse et terrain complètement plat.",tags:['long range','plaine','flat','espace infini']},
+  {id:21,n:'Plaine de la Crau',v:'Istres (13)',t:'Long Range',legal:true,d:1,desc:"Grande plaine caillouteuse unique en Europe. Vent fréquent (mistral). Zone peu contrainte, excellent dégagement. Idéal pour tests portée et endurance.",tags:['long range','mistral','plaine','endurance']},
+  {id:22,n:'Les Landes — Forêt Sud',v:'Mimizan (40)',t:'Long Range',legal:true,d:1,lat:44.202,lon:-1.228,desc:"Forêt de pins des Landes, couloirs rectilignes. Peu de bruit aérien civil.",tags:['forêt','long range','Atlantique']},
+  {id:23,n:'Plaine de Champagne',v:'Reims (51)',t:'Long Range',legal:true,d:1,lat:49.250,lon:4.030,desc:"Plateau champenois, vignes et plaines. Excellent dégagement, portée ELRS optimale.",tags:['plaine','vignes','portée']},
+  {id:24,n:'Gorges du Verdon — environs',v:'Moustiers-Sainte-Marie (04)',t:'Cinématique',legal:false,d:4,lat:43.756,lon:6.220,desc:"Gorges les plus profondes d'Europe (700m). Zone PNR — dérogation requise.",tags:['gorges','turquoise','dérogation','spectaculaire']},
+  {id:25,n:'Pointe du Raz',v:'Plogoff (29)',t:'Cinématique',legal:true,d:3,lat:48.047,lon:-4.734,desc:"Pointe la plus à l'ouest de France. Falaises, vent violent. Pilotes expérimentés uniquement.",tags:['falaises','atlantique','vent','Bretagne']},
+];
+
+const SPOT_COLORS={'Freestyle':'#e8321c','Cinématique':'#00aaff','Racing':'#f5a300','Long Range':'#1adb6b','Multi':'#888'};
+
+const SPOTS2=[
+  /* ── PAS-DE-CALAIS / NORD / ARRAS ────── */
+  {id:101,n:'Plaine de Mercatel',v:'Mercatel (62)',t:'Long Range',legal:true,d:1,lat:50.252,lon:2.785,desc:"Ta plaine de référence ! Zone agricole flat au sud d'Arras. Dégagement 10km+. Pas d'obstacles, peu de passage. ELRS 900MHz parfait.",tags:['local','plaine','long range','flat','espace infini']},
+  {id:102,n:'Carrière de Beaurains',v:'Beaurains (62)',t:'Freestyle',legal:true,d:2,lat:50.265,lon:2.800,desc:"Ancienne carrière à 2km d'Arras. Structures naturelles, niveaux variés, peu de passage en semaine. Sol dur — prévois les crashs.",tags:['carrière','freestyle','arras']},
+  {id:103,n:'Plaine de Ransart',v:'Ransart (62)',t:'Long Range',legal:true,d:1,lat:50.289,lon:2.844,desc:"Plaine agricole plate à l'est d'Arras. Peu de contraintes, bon dégagement. Idéale pour tests portée.",tags:['plaine','long range','portée']},
+  {id:104,n:'Lac d\'Arleux — Sensée',v:'Arleux (59)',t:'Cinématique',legal:true,d:1,lat:50.286,lon:3.096,desc:"Lac de la Sensée, eau calme entourée de verdure. Beau spot cinématique à 30km d'Arras. Accès facile.",tags:['lac','cinéma','eau']},
+  {id:105,n:'Terril des jumeaux de Loos',v:'Loos-en-Gohelle (62)',t:'Freestyle',legal:true,d:2,lat:50.447,lon:2.811,desc:"Terrils jumeaux les plus hauts du Nord (186m). Vue panoramique. Freestyle dans les environs immédiats.",tags:['terril','freestyle','vue']},
+  {id:106,n:'Circuit de Croix-en-Ternois',v:'Croix-en-Ternois (62)',t:'Racing',legal:true,d:1,lat:50.363,lon:2.374,desc:"Vrai circuit automobile. Meilleur spot racing du Pas-de-Calais. Événements FPV organisés ponctuellement.",tags:['circuit','racing','organisé']},
+  {id:107,n:'Plaine de la Scarpe',v:'Saint-Nicolas-lez-Arras (62)',t:'Long Range',legal:true,d:1,lat:50.316,lon:2.857,desc:"Vallée de la Scarpe, zones planes. Long range facile depuis Arras. Légal catégorie ouverte.",tags:['plaine','long range','Arras']},
+  {id:108,n:'Terril de Noeux-les-Mines',v:'Noeux-les-Mines (62)',t:'Freestyle',legal:true,d:2,lat:50.482,lon:2.662,desc:"Grand terril aménagé (ski en hiver). Hors ski : zone freestyle avec vue sur la plaine minière.",tags:['terril','freestyle','vue panoramique']},
+  {id:109,n:'Étang de Blangy-sur-Ternoise',v:'Blangy-sur-Ternoise (62)',t:'Cinématique',legal:true,d:1,lat:50.427,lon:2.346,desc:"Petit étang calme en campagne artésienne. Belle lumière le matin. Zone peu contrainte.",tags:['étang','cinéma','rural']},
+  {id:110,n:'Base aérienne d\'Épinoy',v:'Épinoy (62)',t:'Long Range',legal:true,d:1,lat:50.280,lon:3.014,desc:"Ancienne piste OTAN désaffectée. Zone plate, idéale pour le long range. Vérifier accès mairie.",tags:['piste','long range','flat','désaffecté']},
+  {id:111,n:'Canal d\'Aire à la Lys',v:'Aire-sur-la-Lys (62)',t:'Cinématique',legal:true,d:1,lat:50.637,lon:2.542,desc:"Canal pittoresque avec écluses historiques. Architecture flamande, reflets sur l'eau.",tags:['canal','cinéma','écluses']},
+  {id:112,n:'Forêt de Nieppe',v:'Nieppe (59)',t:'Freestyle',legal:false,d:3,lat:50.726,lon:2.640,desc:"Couloirs entre les arbres pour gap flying. Zone ONF — autorisation recommandée.",tags:['forêt','freestyle','gap']},
+  {id:113,n:'Marais de Saint-Omer',v:'Saint-Omer (62)',t:'Cinématique',legal:false,d:2,lat:50.742,lon:2.259,desc:"Marais audomarois unique. Maraîchage sur eau. Zone Natura 2000 — dérogation recommandée.",tags:['marais','cinéma','unique']},
+  {id:114,n:'Cap Blanc-Nez',v:'Escalles (62)',t:'Cinématique',legal:false,d:3,lat:50.921,lon:1.717,desc:"Falaises de 134m avec vue sur l'Angleterre. Grand site national classé. Possible à distance.",tags:['falaises','mer','Angleterre','vent']},
+  {id:115,n:'Dunes de Wissant',v:'Wissant (62)',t:'Cinématique',legal:true,d:2,lat:50.882,lon:1.666,desc:"Dunes sauvages entre les deux caps. Spot hors saison. Vent fort garanti.",tags:['dunes','côte','vent','Manche']},
+  {id:116,n:'Baie de l\'Authie — Berck',v:'Berck-sur-Mer (62)',t:'Cinématique',legal:true,d:2,lat:50.347,lon:1.587,desc:"Grande baie atlantique, plage et dunes. Cinématique hors saison touristique.",tags:['baie','plage','atlantique']},
+  {id:117,n:'Baie de la Slack — Wimereux',v:'Wimereux (62)',t:'Cinématique',legal:true,d:2,lat:50.773,lon:1.601,desc:"Petite baie avec falaises. Lumière magnifique en soirée.",tags:['baie','falaises','soirée']},
+  {id:118,n:'Marais de Guînes',v:'Guînes (62)',t:'Cinématique',legal:true,d:1,lat:50.870,lon:1.870,desc:"Zone humide calme près de Calais. Hors saison : peu de monde.",tags:['marais','cinéma','Calais']},
+  {id:119,n:'Plaine de Flandre — Cassel',v:'Cassel (59)',t:'Long Range',legal:true,d:1,lat:50.795,lon:2.490,desc:"Vaste plaine flamande depuis le Mont Cassel. Vue 360° sur toute la Flandre. Excellent pour le long range.",tags:['plaine','Flandre','vue','long range']},
+  {id:120,n:'Club Aéromodélisme de Douai',v:'Douai (59)',t:'Racing',legal:true,d:1,lat:50.370,lon:3.080,desc:"Club aéromodélisme avec zone FPV dédiée. Terrain entretenu, proche d'Arras. Accueil.",tags:['club','Douai','FPV']},
+  {id:121,n:'Forêt de Vimy — alentours',v:'Vimy (62)',t:'Long Range',legal:true,d:1,lat:50.379,lon:2.773,desc:"Plaine autour du Mémorial de Vimy. Zone ouverte à distance du site historique. Éviter le mémorial lui-même.",tags:['plaine','long range','historique']},
+  {id:122,n:'Terrils de Sabatier',v:'Sabatier (62)',t:'Freestyle',legal:true,d:2,lat:50.530,lon:2.730,desc:"Terrils miniers accessibles. Zone peu habitée, structures variées. Patrimoine industriel impressionnant.",tags:['terrils','freestyle','patrimoine']},
+  {id:123,n:'Aéroclub de Béthune — Beuvry',v:'Beuvry (62)',t:'Long Range',legal:true,d:1,lat:50.520,lon:2.656,desc:"Aéroclub avec zone séparée drones. Espace dégagé, coordination nécessaire avec la tour.",tags:['aéroclub','long range','Béthune']},
+  {id:124,n:'FPV Club Racing Nord — Hérin',v:'Hérin (59)',t:'Racing',legal:true,d:1,lat:50.368,lon:3.480,desc:"Club actif dans le Nord. Piste racing. Ambiance accueillante, ouvert débutants.",tags:['racing','club','Nord']},
+  {id:125,n:'Zone industrielle de Dourges',v:'Dourges (62)',t:'Freestyle',legal:false,d:3,lat:50.474,lon:3.016,desc:"Entrepôts logistiques modernes, structures urban. Zone privée — permission obligatoire.",tags:['urban','entrepôts','freestyle']},
+  {id:126,n:'Plaine d\'Hesdin',v:'Hesdin (62)',t:'Long Range',legal:true,d:1,lat:50.378,lon:2.039,desc:"Vallée de la Canche, plaine dégagée. Peu de contraintes aériennes. Idéale pour voler depuis Mercatel.",tags:['plaine','long range','Canche']},
+  {id:127,n:'Lac de Condette — Hardelot',v:'Condette (62)',t:'Cinématique',legal:true,d:1,lat:50.644,lon:1.662,desc:"Petit lac forestier près d'Hardelot. Calme, reflets. Bon spot pour débuter le cinématique.",tags:['lac','forêt','calme']},
+  {id:128,n:'Cap Gris-Nez',v:'Audinghen (62)',t:'Cinématique',legal:false,d:3,lat:50.877,lon:1.578,desc:"Falaises de grès, point le plus proche de l'Angleterre. Zone protégée. Vent violent, vue imprenable.",tags:['falaises','Angleterre','vent','classé']},
+  {id:129,n:'Étang de la Forêt de Clairmarais',v:'Clairmarais (62)',t:'Cinématique',legal:true,d:1,lat:50.761,lon:2.236,desc:"Étang forestier calme dans la forêt de Clairmarais. Zone peu fréquentée. Idéal pour le cinématique low level.",tags:['étang','forêt','calme','Saint-Omer']},
+  {id:130,n:'Plaine d\'Artois — Avesnes-le-Comte',v:'Avesnes-le-Comte (62)',t:'Long Range',legal:true,d:1,lat:50.271,lon:2.530,desc:"Plaine artésienne à 20km de Mercatel. Grandes cultures, aucun obstacle. Parfait long range.",tags:['plaine','long range','flat','Artois']},
+  /* ── RESTE DE FRANCE ─── */
+  {id:131,n:'Plaine de la Beauce',v:'Chartres (28)',t:'Long Range',legal:true,d:1,lat:48.090,lon:1.750,desc:"Immense plaine de France. Dégagement 15km+. La référence long range.",tags:['long range','flat','espace infini']},
+  {id:132,n:'Carrières de Cergy',v:'Cergy (95)',t:'Freestyle',legal:true,d:2,lat:49.040,lon:2.070,desc:"Zone ouverte, peu de passage en semaine. Idéal freestyle débutant IDF.",tags:['freestyle','débutant','IDF']},
+  {id:133,n:'Lac de Créteil',v:'Créteil (94)',t:'Cinématique',legal:true,d:1,lat:48.770,lon:2.460,desc:"Plan d'eau urbain très photogénique. Lumière magnifique à l'aube.",tags:['lac','cinéma','IDF']},
+  {id:134,n:'Baie de Somme',v:'Le Crotoy (80)',t:'Cinématique',legal:true,d:2,lat:50.347,lon:1.637,desc:"Estuaire mondial. Lumière dorée, flamants roses, reflets de marée.",tags:['baie','flamants','lumière']},
+  {id:135,n:'Plaine de la Crau',v:'Istres (13)',t:'Long Range',legal:true,d:1,lat:43.550,lon:4.950,desc:"Grande plaine caillouteuse unique. Mistral fréquent. Excellent dégagement.",tags:['plaine','mistral','long range']},
+  {id:136,n:'Plaine des Landes',v:'Mimizan (40)',t:'Long Range',legal:true,d:1,lat:44.202,lon:-1.228,desc:"Forêt de pins, couloirs rectilignes. Long range et cinéma.",tags:['forêt','long range','Atlantique']},
+  {id:137,n:'Circuit Buggy Le Mans',v:'Le Mans (72)',t:'Racing',legal:true,d:2,lat:47.950,lon:0.210,desc:"Piste reconvertie pour FPV racing. Événements réguliers.",tags:['racing','circuit','club']},
+  {id:138,n:'Plaine de Champagne',v:'Reims (51)',t:'Long Range',legal:true,d:1,lat:49.250,lon:4.030,desc:"Plateau champenois. Excellent dégagement, portée ELRS maximale.",tags:['plaine','portée','long range']},
+  {id:139,n:'Pointe du Raz',v:'Plogoff (29)',t:'Cinématique',legal:true,d:3,lat:48.047,lon:-4.734,desc:"Falaises atlantiques sauvages. Vent violent. Pilotes confirmés.",tags:['falaises','Bretagne','vent']},
+  {id:140,n:"Plaine d'Alsace",v:'Colmar (68)',t:'Long Range',legal:true,d:1,lat:48.076,lon:7.357,desc:"Plaine rhénane entre Vosges et Rhin. Excellent dégagement.",tags:['plaine','Alsace','Rhin','long range']},
+
+  /* ══ URBEX & FRICHES — PAS-DE-CALAIS / NORD ══ */
+  {id:200,n:'Friche industrielle — Lens',v:'Lens (62)',t:'Freestyle',legal:false,d:3,lat:50.431,lon:2.826,desc:"Anciennes installations minières. Structures métalliques, trémies, rails. Permission propriétaire requise. Urbex freestyle exceptionnel.",tags:['urbex','friche','minier','freestyle avancé']},
+  {id:201,n:'Ancienne usine textile — Roubaix',v:'Roubaix (59)',t:'Freestyle',legal:false,d:3,lat:50.690,lon:3.175,desc:"Friches textiles de la Vallée de la Lys. Bâtiments abandonnés, toitures percées, structures métalliques. Permission obligatoire.",tags:['urbex','textile','friche','Roubaix']},
+  {id:202,n:'Zone portuaire désaffectée — Dunkerque',v:'Dunkerque (59)',t:'Freestyle',legal:false,d:3,lat:51.048,lon:2.375,desc:"Anciens quais et entrepôts portuaires. Structures industrielles massives en bord de mer. Accès coordination Port de Dunkerque.",tags:['port','urbex','industrie','mer du Nord']},
+  {id:203,n:'Bunkers Mur de l\'Atlantique — Calais',v:'Sangatte (62)',t:'Freestyle',legal:true,d:2,lat:50.952,lon:1.757,desc:"Bunkers WWII sur les dunes côtières. Structures en béton pour le freestyle gap. Zone accessible, peu contrainte.",tags:['bunkers','WWII','dunes','freestyle']},
+  {id:204,n:'Bunkers côte d\'Opale — Wissant',v:'Wissant (62)',t:'Freestyle',legal:true,d:2,lat:50.893,lon:1.649,desc:"Multiples blockhaus sur la plage et les falaises. Freestyle autour des structures béton. Zone ouverte hors saison.",tags:['blockhaus','WWII','côte Opale','freestyle']},
+  {id:205,n:'Ancienne cokerie de Drocourt',v:'Drocourt (62)',t:'Freestyle',legal:false,d:4,lat:50.376,lon:2.990,desc:"Immense friche industrielle cokerie. Structures métalliques exceptionnelles mais site dangereux. Accès strictement interdit sans propriétaire.",tags:['cokerie','friche','danger','urbex']},
+  {id:206,n:'Terril du 11/19 — Loos-en-Gohelle',v:'Loos-en-Gohelle (62)',t:'Freestyle',legal:true,d:1,lat:50.459,lon:2.799,desc:"Terril conique accessible au public. Sentiers balisés, vue panoramique. Point de départ idéal pour freestyle dans les environs.",tags:['terril','public','vue','freestyle']},
+  {id:207,n:'Friche Métaleurop — Noyelles-Godault',v:'Noyelles-Godault (62)',t:'Freestyle',legal:false,d:4,lat:50.418,lon:3.003,desc:"Ancienne fonderie de plomb — sol pollué. Structures métalliques spectaculaires. Zone interdite d'accès (pollution), photos à distance seulement.",tags:['friche','pollution','danger','industriel']},
+  {id:208,n:'Carrières de Marquise',v:'Marquise (62)',t:'Freestyle',legal:true,d:2,lat:50.832,lon:1.714,desc:"Carrières de marbre de Marquise, paysage lunaire. Falaises de calcaire blanc, plans d'eau turquoise. Zone partiellement accessible.",tags:['carrière','marbre','turquoise','freestyle']},
+  {id:209,n:'Ancienne base militaire — Éperlecques',v:'Éperlecques (62)',t:'Freestyle',legal:true,d:2,lat:50.824,lon:2.124,desc:"Blockhaus d'Éperlecques — V2 WWII. Monument historique avec bunker géant. Freestyle possible dans les environs.",tags:['bunker','V2','WWII','historique']},
+  {id:210,n:'Zone industrielle weekend — Boulogne',v:'Boulogne-sur-Mer (62)',t:'Freestyle',legal:true,d:1,lat:50.726,lon:1.614,desc:"Zone portuaire et industrielle. Le weekend, très peu de circulation. Structures portuaires pour le freestyle. Zone légale en semaine basse activité.",tags:['port','industriel','freestyle','weekend']},
+  {id:211,n:'Friche minière — Oignies',v:'Oignies (62)',t:'Freestyle',legal:false,d:3,lat:50.467,lon:2.990,desc:"Puits de mine abandonné, chevalets, bâtiments. Patrimoine UNESCO. Contact fondation avant tout vol.",tags:['mine','UNESCO','patrimoine','urbex']},
+  {id:212,n:'Terril de Rieulay',v:'Rieulay (59)',t:'Cinématique',legal:true,d:1,lat:50.380,lon:3.283,desc:"Terril Nord reconverti en espace naturel. Accessible au public, vue sur la plaine. Belle lumière matinale.",tags:['terril','nature','vue','cinéma']},
+
+  /* ══ URBEX — NORMANDIE ══ */
+  {id:213,n:'Falaises d\'Étretat',v:'Étretat (76)',t:'Cinématique',legal:false,d:3,lat:49.708,lon:0.203,desc:"Falaises emblématiques. Zone très touristique, vol difficile à autoriser. Contacter mairie pour dérogation.",tags:['falaises','cinéma','classé','Normandie']},
+  {id:214,n:'Mont Saint-Michel — environs',v:'Mont-Saint-Michel (50)',t:'Cinématique',legal:false,d:3,lat:48.636,lon:-1.511,desc:"Baie du Mont Saint-Michel. Monument UNESCO — vol strictement interdit sur le monument. Zone de la baie accessible sous conditions.",tags:['UNESCO','baie','classé','emblématique']},
+  {id:215,n:'Batteries allemandes — Longues-sur-Mer',v:'Longues-sur-Mer (14)',t:'Freestyle',legal:true,d:1,lat:49.344,lon:-0.685,desc:"Batteries côtières WWII en béton (D-Day). Monument historique accessible. Freestyle autour des blockhaus monumentaux.",tags:['blockhaus','WWII','D-Day','historique']},
+  {id:216,n:'Pointe du Hoc',v:'Cricqueville-en-Bessin (14)',t:'Cinématique',legal:false,d:2,lat:49.395,lon:-0.905,desc:"Site historique D-Day, cratères et bunkers. Zone classée — vol sans autorisation interdit. Demande possible via mairie.",tags:['D-Day','WWII','historique','classé']},
+
+  /* ══ NATURE — SPECTACULAIRE ══ */
+  {id:217,n:'Dune du Pilat',v:'La Teste-de-Buch (33)',t:'Cinématique',legal:false,d:2,lat:44.586,lon:-1.219,desc:"Plus haute dune d'Europe (110m). Vue sur l'Atlantique. Zone touristique protégée — dérogation préfectorale nécessaire.",tags:['dune','Atlantique','UNESCO','dérogation']},
+  {id:218,n:'Gorges de l\'Ardèche',v:"Vallon-Pont-d'Arc (07)",t:'Cinématique',legal:false,d:2,lat:44.375,lon:4.392,desc:"Falaises calcaires 300m, arche naturelle. Zone Réserve Naturelle Nationale — autorisation requise.",tags:['gorges','arche','réserve','cinéma']},
+  {id:219,n:'Cirque de Navacelles',v:'Blandas (30)',t:'Cinématique',legal:true,d:2,lat:43.876,lon:3.487,desc:"Méandre fossilisé spectaculaire. Vue en belvédère depuis les causses. Zone peu contrainte.",tags:['cirque','méandre','causses','spectaculaire']},
+  {id:220,n:'Puy de Dôme',v:'Orcines (63)',t:'Cinématique',legal:false,d:2,lat:45.772,lon:2.964,desc:"Volcan emblématique Auvergne. Zone Parc Naturel Régional. Belle vue sur la chaîne des Puys (UNESCO).",tags:['volcan','Auvergne','UNESCO','spectaculaire']},
+  {id:221,n:'Viaduc de Millau',v:'Millau (12)',t:'Cinématique',legal:false,d:2,lat:44.079,lon:3.023,desc:"Pont le plus haut du monde. Vue sur les gorges du Tarn. Zone ouvrage d'art — coordination gestionnaire.",tags:['viaduc','pont','Millau','spectaculaire']},
+  {id:222,n:'Montagne Sainte-Victoire',v:'Aix-en-Provence (13)',t:'Cinématique',legal:false,d:2,lat:43.532,lon:5.612,desc:"Massif calcaire emblématique de Cézanne. Zone Natura 2000. Dérogation Parc recommandée.",tags:['falaises','Provence','cinéma','Cézanne']},
+  {id:223,n:"Lac de Sainte-Croix",v:'Sainte-Croix-du-Verdon (04)',t:'Cinématique',legal:true,d:2,lat:43.769,lon:6.146,desc:"Lac turquoise aux portes du Verdon. Zone peu contrainte à distance des activités nautiques. Résultat cinéma exceptionnel.",tags:['lac','turquoise','Verdon','cinéma']},
+  {id:224,n:'Aiguilles de Bavella (Corse)',v:'Zonza (2A)',t:'Cinématique',legal:false,d:3,lat:41.741,lon:9.185,desc:"Aiguilles granitiques spectaculaires. Zone Parc Naturel Régional de Corse. Autorisation préalable.",tags:['Corse','granit','montagne','spectaculaire']},
+  {id:225,n:'Cirque de Baume',v:'Baume-les-Messieurs (39)',t:'Cinématique',legal:true,d:2,lat:46.674,lon:5.680,desc:"Cirque glaciaire Jura, cascades et falaises. Zone accessible, peu de contraintes hors réserve.",tags:['cirque','Jura','cascades','cinéma']},
+  {id:226,n:'Falaises de Piana (Corse)',v:'Piana (2A)',t:'Cinématique',legal:false,d:2,lat:42.239,lon:8.640,desc:"Calanques de granit rose UNESCO. Eaux turquoise. Zone Parc Naturel — dérogation.",tags:['Corse','calanques','UNESCO','turquoise']},
+
+  /* ══ INDUSTRIEL / ZONES SAFE ══ */
+  {id:227,n:'Zone commerciale weekend — Arras',v:'Arras (62)',t:'Freestyle',legal:true,d:1,lat:50.293,lon:2.780,desc:"Parkings et zones logistiques déserts le dimanche matin. Structures simples pour débuter le freestyle urbain. 100% légal.",tags:['parking','weekend','débutant','freestyle']},
+  {id:228,n:'Carrière de Réty',v:'Réty (62)',t:'Freestyle',legal:true,d:2,lat:50.773,lon:1.741,desc:"Carrière active mais zones périphériques accessibles le weekend. Structures calcaires, sol plat.",tags:['carrière','weekend','calcaire']},
+  {id:229,n:'Silos agricoles — Thiérache',v:'Vervins (02)',t:'Freestyle',legal:true,d:1,lat:49.837,lon:3.910,desc:"Silos et bâtiments agricoles en zone rurale. Permission propriétaire agricole facile à obtenir. Bel urbex rural.",tags:['silos','rural','agricole','freestyle']},
+  {id:230,n:'Chantier de démolition — Hénin-Beaumont',v:'Hénin-Beaumont (62)',t:'Freestyle',legal:false,d:3,lat:50.416,lon:2.965,desc:"Zone d'anciens immeubles en démolition. Spectaculaire mais dangereux — accord gestionnaire chantier obligatoire.",tags:['démolition','urbain','danger','permission']},
+  {id:231,n:'Zone logistique — Dourges Nœud',v:'Dourges (62)',t:'Freestyle',legal:false,d:2,lat:50.468,lon:3.017,desc:"Delta 3, grande zone logistique. Le weekend, zones de parking vides. Demander permission au gestionnaire.",tags:['logistique','parking','weekend','semi-urbain']},
+  {id:232,n:'Parc éolien — Artois',v:'Frévent (62)',t:'Long Range',legal:true,d:1,lat:50.275,lon:2.295,desc:"Plaine avec éoliennes. Zone dégagée idéale pour le long range. Attention aux éoliennes (obstacles à éviter).",tags:['éoliennes','plaine','long range','Artois']},
+  {id:233,n:'Base ULM de Phalempin',v:'Phalempin (59)',t:'Long Range',legal:true,d:1,lat:50.519,lon:3.031,desc:"Terrain ULM avec zone séparée drones. Coordination nécessaire. Terrain dégagé idéal.",tags:['ULM','terrain','long range','coordination']},
+  {id:234,n:'Grotte de Niaux — environs',v:'Niaux (09)',t:'Cinématique',legal:true,d:2,lat:42.832,lon:1.556,desc:"Vallée de Vicdessos dans les Pyrénées ariégeoises. Paysages montagnards. Zone ouverte en extérieur.",tags:['Pyrénées','montagne','vallée','cinéma']},
+  {id:235,n:'Château de Pierrefonds',v:'Pierrefonds (60)',t:'Cinématique',legal:false,d:1,lat:49.346,lon:2.981,desc:"Château médiéval forêt de Compiègne. Monument historique — dérogation DRAC. Résultat médiéval fantastique.",tags:['château','médiéval','historique','forêt']},
+  {id:236,n:'Lac de Der-Chantecoq',v:'Giffaumont (51)',t:'Cinématique',legal:true,d:1,lat:48.549,lon:4.702,desc:"Plus grand lac artificiel de France. Zone peu contrainte. Oiseaux migrateurs, reflets magnifiques.",tags:['lac','oiseaux','Champagne','cinéma']},
+  {id:237,n:'Vieux-Port de Marseille — hors saison',v:'Marseille (13)',t:'Cinématique',legal:false,d:2,lat:43.295,lon:5.374,desc:"Zone portuaire historique. Forte activité nautique. Hors saison et avec coordination Mairie, possible.",tags:['port','Marseille','urbain','saison']},
+  {id:238,n:'Centrale nucléaire — extérieur Gravelines',v:'Gravelines (59)',t:'Long Range',legal:true,d:1,lat:51.006,lon:2.132,desc:"Plaine côtière au nord de la centrale (zone légale à distance réglementaire). Dégagement total sur la mer du Nord.",tags:['mer du Nord','plaine','long range','côtier']},
+];
+
+const QUICK_Q=['Comment débuter le FPV ?','Radio ELRS à choisir ?','Configurer Betaflight ?','DJI O3 vs Walksnail ?','Réglementation France ?','Meilleur 5 pouces 2024 ?'];
+
+/* ════════════════════════════════════════════════════════════
+   NAVIGATION
+   ════════════════════════════════════════════════════════════ */
+let currentView='carte';
+
+function buildNav(){
+  const nl=document.getElementById('nav-list');
+  const mn=document.getElementById('mob-nav');
+  NAV.forEach(item=>{
+    // Sidebar
+    const btn=document.createElement('button');
+    btn.className='nav-item'+(item.id===currentView?' active':'');
+    btn.dataset.view=item.id;
+    btn.innerHTML=`<div class="nav-bar"></div><div class="nav-inner"><span class="nav-em">${item.em}</span><span>${item.label}</span></div>`;
+    btn.onclick=()=>nav(item.id);
+    nl.appendChild(btn);
+    // Mobile nav
+    const mb=document.createElement('button');
+    mb.className='mob-btn'+(item.id===currentView?' active':'');
+    mb.dataset.view=item.id;
+    mb.innerHTML=`<span>${item.em}</span><span>${item.label.split(' ')[0]}</span>`;
+    mb.onclick=()=>nav(item.id);
+    mn.appendChild(mb);
+  });
+}
+
+function nav(id){
+  currentView=id;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const v=document.getElementById('view-'+id);
+  if(v)v.classList.add('active');
+  document.querySelectorAll('.nav-item,.mob-btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.view===id);
+  });
+  const ni=NAV.find(n=>n.id===id);
+  if(ni){document.getElementById('tb-tag').textContent=ni.label.toUpperCase();}
+  document.getElementById('side').classList.remove('open');
+  // Lazy-init maps
+  if(id==='meteo') setTimeout(()=>{initWxMap();if(wxMap)wxMap.invalidateSize();},100);
+  if(id==='spots'){
+    setTimeout(()=>{
+      // Only init map if the map tab is currently active
+      const smap=document.getElementById('stab-smap');
+      if(smap&&smap.style.display!=='none'){
+        if(!spotsMapInited) initSpotsMap();
+        else spotsMap.invalidateSize();
+      }
+    },100);
+  }
+}
+
+function toggleSide(){document.getElementById('side').classList.toggle('open');}
+
+/* ════════════════════════════════════════════════════════════
+   TOPBAR DATE
+   ════════════════════════════════════════════════════════════ */
+(function(){
+  const d=new Date();
+  document.getElementById('tb-date').textContent=
+    d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
+})();
+
+/* ════════════════════════════════════════════════════════════
+   CHECKLIST
+   ════════════════════════════════════════════════════════════ */
+let checked={};
+function buildChk(){
+  const cont=document.getElementById('chk-cats');
+  cont.innerHTML='';
+  Object.entries(CHECKS).forEach(([cat,items])=>{
+    const w=document.createElement('div');
+    w.innerHTML=`<div class="cat-title">${cat}</div>`;
+    const card=document.createElement('div');
+    card.className='card';card.style.padding='0';
+    items.forEach((item,i)=>{
+      const row=document.createElement('div');
+      row.className='chk'+(checked[item.id]?' done':'');
+      row.id='cr-'+item.id;
+      row.innerHTML=`<div class="chk-box${checked[item.id]?' done':''}" id="cb-${item.id}">${checked[item.id]?'✓':''}</div><span class="chk-txt${checked[item.id]?' done':''}" id="ct-${item.id}">${item.l}</span>${item.c?'<span class="chk-crit">⚡</span>':''}`;
+      row.onclick=()=>toggleChk(item.id);
+      if(i<items.length-1)row.style.borderBottom='1px solid var(--b1)';
+      card.appendChild(row);
+    });
+    w.appendChild(card);cont.appendChild(w);
+  });
+  updateChkProg();
+}
+function toggleChk(id){
+  checked[id]=!checked[id];
+  const row=document.getElementById('cr-'+id);
+  const box=document.getElementById('cb-'+id);
+  const txt=document.getElementById('ct-'+id);
+  row.classList.toggle('done',checked[id]);
+  box.classList.toggle('done',checked[id]);
+  box.textContent=checked[id]?'✓':'';
+  txt.classList.toggle('done',checked[id]);
+  updateChkProg();
+}
+function updateChkProg(){
+  const all=Object.values(CHECKS).flat();
+  const done=all.filter(i=>checked[i.id]).length;
+  const pct=Math.round(done/all.length*100);
+  const col=pct>=80?'var(--ok)':pct>=50?'var(--warn)':'var(--red)';
+  document.getElementById('chk-count').textContent=`${done} / ${all.length} ITEMS VÉRIFIÉS`;
+  const s=document.getElementById('chk-pct');
+  s.textContent=pct+'%';s.style.color=col;
+  const b=document.getElementById('chk-bar');
+  b.style.width=pct+'%';b.style.background=col;
+}
+function evalFlight(){
+  const all=Object.values(CHECKS).flat();
+  const done=all.filter(i=>checked[i.id]).length;
+  const pct=Math.round(done/all.length*100);
+  const crit=all.filter(i=>i.c&&!checked[i.id]);
+  const res=document.getElementById('chk-result');
+  res.style.display='block';
+  if(crit.length===0&&pct>=80){
+    res.className='info ok';
+    res.innerHTML='<strong>✅ PRÊT À VOLER</strong> — Tous les points critiques sont validés. Bon vol et restez prudent.';
+  } else if(crit.length>0){
+    res.className='info bad';
+    res.innerHTML=`<strong>❌ ${crit.length} POINT(S) CRITIQUE(S) MANQUANT(S)</strong><br>${crit.map(i=>i.l).join(' · ')}`;
+  } else {
+    res.className='info warn';
+    res.innerHTML=`<strong>⚠️ VOL DÉCONSEILLÉ</strong> — Score ${pct}% insuffisant. Complète davantage d'items.`;
+  }
+}
+function resetChk(){checked={};document.getElementById('chk-result').style.display='none';buildChk();}
+
+/* ════════════════════════════════════════════════════════════
+   MÉTÉO
+   ════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════
+   MÉTÉO — autocomplete + carte France + score FPV
+   ════════════════════════════════════════════════════════════ */
+
+// Villes françaises pour autocomplete
+const FR_CITIES=['Paris','Lyon','Marseille','Toulouse','Nice','Nantes','Strasbourg','Montpellier','Bordeaux','Lille','Rennes','Reims','Saint-Étienne','Toulon','Le Havre','Grenoble','Dijon','Angers','Nîmes','Villeurbanne','Aix-en-Provence','Clermont-Ferrand','Brest','Le Mans','Amiens','Tours','Rouen','Limoges','Perpignan','Metz','Nancy','Besançon','Orléans','Mulhouse','Caen','Pau','Annecy','Cannes','Avignon','Dunkerque','Calais','Arras','Lens','Béthune','Boulogne-sur-Mer','Saint-Omer','Douai','Valenciennes','Cambrai','Abbeville','Soissons','Laon','Troyes','Épinal','Colmar','Thionville','Longwy','Charleville-Mézières','Roubaix','Tourcoing','Villeneuve-d\'Ascq','Maubeuge','Hazebrouck','Saint-Quentin','Compiègne','Beauvais','Chartres','Châteauroux','Blois','Bourges','Auxerre','Sens','Fontainebleau','Melun','Versailles','Pontoise','Cergy','Évry','Corbeil-Essonnes','Montreuil','Vincennes','Boulogne-Billancourt','Argenteuil','Saint-Denis','Montreuil','Créteil','Champigny-sur-Marne','Nanterre','Vitry-sur-Seine','Mérignac','Pessac','Talence','Villenave-d\'Ornon','Agen','Périgueux','Angoulême','La Rochelle','Poitiers','Niort','Libourne','Brive-la-Gaillarde','Aurillac','Rodez','Albi','Castres','Montauban','Tarbes','Bayonne','Pau','Biarritz','Auch','Foix','Carcassonne','Narbonne','Béziers','Sète','Montélimar','Valence','Chambéry','Annecy','Albertville','Thonon-les-Bains','Annemasse','Oyonnax','Roanne','Vichy','Moulins','Auxerre','Châlon-sur-Saône','Mâcon','Bourg-en-Bresse','Villefranche-sur-Saône','Belfort','Vesoul','Lons-le-Saunier','Chaumont','Bar-le-Duc','Verdun','Sarreguemines','Forbach','Saint-Avold','Sarrebourg','Saverne','Haguenau','Sélestat','Guebwiller'];
+
+// Données villes pour la carte météo France
+const WX_MAP_CITIES=[
+  {n:'Paris',lat:48.8566,lon:2.3522},{n:'Lyon',lat:45.748,lon:4.847},{n:'Marseille',lat:43.296,lon:5.370},
+  {n:'Toulouse',lat:43.604,lon:1.444},{n:'Nice',lat:43.710,lon:7.262},{n:'Nantes',lat:47.218,lon:-1.554},
+  {n:'Strasbourg',lat:48.573,lon:7.752},{n:'Bordeaux',lat:44.837,lon:-0.579},{n:'Lille',lat:50.629,lon:3.057},
+  {n:'Rennes',lat:48.114,lon:-1.680},{n:'Reims',lat:49.258,lon:4.032},{n:'Montpellier',lat:43.611,lon:3.877},
+  {n:'Brest',lat:48.390,lon:-4.486},{n:'Dijon',lat:47.322,lon:5.042},{n:'Grenoble',lat:45.188,lon:5.724},
+  {n:'Tours',lat:47.394,lon:0.690},{n:'Rouen',lat:49.443,lon:1.099},{n:'Metz',lat:49.119,lon:6.177},
+  {n:'Caen',lat:49.182,lon:-0.371},{n:'Nancy',lat:48.693,lon:6.184},{n:'Clermont-Ferrand',lat:45.777,lon:3.087},
+  {n:'Pau',lat:43.295,lon:-0.371},{n:'Annecy',lat:45.900,lon:6.117},{n:'Ajaccio',lat:41.918,lon:8.739},
+  {n:'Arras',lat:50.291,lon:2.778},{n:'Dunkerque',lat:51.034,lon:2.377},{n:'Calais',lat:50.952,lon:1.858},
+  {n:'Amiens',lat:49.894,lon:2.302},{n:'Chartres',lat:48.447,lon:1.487},{n:'Limoges',lat:45.831,lon:1.261},
+  {n:'Perpignan',lat:42.689,lon:2.895},{n:'Toulon',lat:43.124,lon:5.928},{n:'Le Havre',lat:49.494,lon:0.107},
+  {n:'Mulhouse',lat:47.750,lon:7.335},{n:'Orléans',lat:47.902,lon:1.909},{n:'Le Mans',lat:47.995,lon:0.200},
+];
+
+function calcFpvScore(wind,gusts,precip,vis,code){
+  let sc=100;
+  if(wind>10)sc-=30;else if(wind>7)sc-=15;
+  if(gusts>12)sc-=25;else if(gusts>9)sc-=10;
+  if(precip>0)sc-=40;
+  if(vis<3)sc-=30;else if(vis<5)sc-=15;
+  if([45,48,51,53,55,61,63,65,71,80,95,99].includes(code))sc-=20;
+  return Math.max(0,sc);
+}
+function scoreColor(sc){return sc>=75?'#1adb6b':sc>=50?'#f5a300':'#e8321c';}
+function scoreLabel(sc){return sc>=75?'VOL OPTIMAL':sc>=50?'VOL POSSIBLE':'DÉCONSEILLÉ';}
+
+// ── Carte météo France ──────────────────────────────────────
+let wxMap=null,wxMapInited=false;
+function initWxMap(){
+  if(wxMapInited)return;
+  const el=document.getElementById('wx-france-map');
+  if(!el||!window.L)return;
+  wxMapInited=true;
+  wxMap=L.map('wx-france-map',{zoomControl:true,scrollWheelZoom:false}).setView([46.8,2.3],5);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'© Esri · Open-Meteo',maxZoom:18
+  }).addTo(wxMap);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'',maxZoom:18,opacity:0.55
+  }).addTo(wxMap);
+  // Place grey markers immediately, then fetch weather async
+  wxMap._markers=[];
+  WX_MAP_CITIES.forEach(city=>{
+    const icon=L.divIcon({
+      className:'',
+      html:`<div id="wxdot-${city.n.replace(/[^a-zA-Z]/g,'')}" style="width:13px;height:13px;border-radius:50%;background:#555;border:2px solid rgba(255,255,255,.5);box-shadow:0 0 6px rgba(0,0,0,.8)"></div>`,
+      iconSize:[13,13],iconAnchor:[6,6]
+    });
+    const m=L.marker([city.lat,city.lon],{icon})
+      .bindTooltip(city.n,{className:'fpv-tt',direction:'top'})
+      .addTo(wxMap);
+    wxMap._markers.push({city,marker:m});
+    // Fetch weather for this city
+    fetchWxForMap(city,m);
+  });
+}
+
+async function fetchWxForMap(city,marker){
+  try{
+    const w=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=wind_speed_10m,wind_gusts_10m,weathercode,visibility,precipitation,temperature_2m&wind_speed_unit=ms&timezone=auto`);
+    const wd=await w.json();const c=wd.current;
+    const vis=c.visibility/1000;
+    const sc=calcFpvScore(c.wind_speed_10m,c.wind_gusts_10m,c.precipitation,vis,c.weathercode);
+    const col=scoreColor(sc);
+    const lbl=scoreLabel(sc);
+    const wmo=WMO[c.weathercode]||{i:'❓',d:'Inconnu'};
+    // Update marker color
+    const dotId=`wxdot-${city.n.replace(/[^a-zA-Z]/g,'')}`;
+    const dotEl=document.getElementById(dotId);
+    if(dotEl){dotEl.style.background=col;dotEl.style.boxShadow=`0 0 8px ${col}88`;}
+    // Popup
+    marker.bindPopup(`
+      <div style="min-width:180px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:${col};margin-bottom:6px">${city.n.toUpperCase()}</div>
+        <div style="font-size:24px;font-family:'Bebas Neue',sans-serif;letter-spacing:1px;margin-bottom:4px;color:${col}">${sc} / 100</div>
+        <div style="font-size:11px;color:#aaa;margin-bottom:8px">${lbl}</div>
+        <div style="font-size:11px;color:#ccc;line-height:1.7">
+          ${wmo.i} ${wmo.d}<br>
+          🌡️ ${c.temperature_2m}°C<br>
+          💨 ${c.wind_speed_10m.toFixed(1)} m/s — rafales ${c.wind_gusts_10m.toFixed(1)} m/s<br>
+          🌧️ ${c.precipitation} mm · 👁️ ${vis.toFixed(0)} km
+        </div>
+        <div style="margin-top:8px;font-size:10px;color:#666;border-top:1px solid #2a2a2a;padding-top:6px">Cliquer "RECHERCHER" pour infos complètes</div>
+      </div>
+    `,{maxWidth:240});
+    marker.on('click',()=>{
+      document.getElementById('wx-inp').value=city.n;
+    });
+  }catch(e){/* silently fail for map */}
+}
+
+// ── Autocomplete ────────────────────────────────────────────
+let acTimer=null,acIdx=-1,acMatches=[];
+
+function acInput(val){
+  clearTimeout(acTimer);
+  if(val.length<2){closeAc();return;}
+  acTimer=setTimeout(()=>showAc(val),120);
+}
+
+function showAc(val){
+  const q=val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  // Local French cities list
+  acMatches=FR_CITIES.filter(c=>c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').startsWith(q)).slice(0,8);
+  if(!acMatches.length){
+    // Fallback: Nominatim
+    acNominatim(val);return;
+  }
+  renderAcList(acMatches);
+}
+
+async function acNominatim(val){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&countrycodes=fr&limit=6&format=json&featuretype=city`);
+    const d=await r.json();
+    acMatches=d.map(x=>x.display_name.split(',')[0]).filter((v,i,a)=>a.indexOf(v)===i).slice(0,6);
+    renderAcList(acMatches);
+  }catch(e){closeAc();}
+}
+
+function renderAcList(items){
+  const list=document.getElementById('ac-list');
+  acIdx=-1;
+  if(!items.length){list.style.display='none';return;}
+  list.innerHTML=items.map((item,i)=>`<div class="ac-item" data-i="${i}" onmousedown="selectAc(${i})">${item}</div>`).join('');
+  list.style.display='block';
+}
+
+function selectAc(i){
+  const city=acMatches[i];
+  document.getElementById('wx-inp').value=city;
+  closeAc();
+  wxFetch(city);
+}
+
+function closeAc(){
+  document.getElementById('ac-list').style.display='none';
+  acMatches=[];acIdx=-1;
+}
+
+function acKeydown(e){
+  const list=document.getElementById('ac-list');
+  const items=list.querySelectorAll('.ac-item');
+  if(e.key==='ArrowDown'){e.preventDefault();acIdx=Math.min(acIdx+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('selected',i===acIdx));}
+  else if(e.key==='ArrowUp'){e.preventDefault();acIdx=Math.max(acIdx-1,0);items.forEach((el,i)=>el.classList.toggle('selected',i===acIdx));}
+  else if(e.key==='Enter'){if(acIdx>=0&&acMatches[acIdx]){selectAc(acIdx);}else{closeAc();wxFetch();}e.preventDefault();}
+  else if(e.key==='Escape'){closeAc();}
+}
+
+// Close autocomplete on outside click
+document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))closeAc();});
+
+// ── Fetch + Render météo ────────────────────────────────────
+async function wxFetch(cityOverride){
+  const c=cityOverride||document.getElementById('wx-inp').value.trim();
+  if(!c)return;
+  closeAc();
+  const btn=document.getElementById('wx-btn');
+  btn.textContent='…';btn.disabled=true;
+  document.getElementById('wx-err').style.display='none';
+  document.getElementById('wx-res').style.display='none';
+  document.getElementById('wx-empty').style.display='none';
+  try{
+    const g=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(c)},France&format=json&limit=1`);
+    const gd=await g.json();
+    if(!gd.length)throw new Error('Ville introuvable — essaie un nom plus précis.');
+    const {lat,lon}=gd[0];
+    const w=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,wind_gusts_10m,weathercode,visibility,precipitation,relative_humidity_2m&wind_speed_unit=ms&timezone=auto`);
+    const wd=await w.json();const cc=wd.current;
+    renderWx({city:c,temp:cc.temperature_2m,wind:cc.wind_speed_10m,gusts:cc.wind_gusts_10m,code:cc.weathercode,vis:cc.visibility/1000,precip:cc.precipitation,hum:cc.relative_humidity_2m});
+    // Pan the France map to this city
+    if(wxMap){wxMap.setView([parseFloat(lat),parseFloat(lon)],9);}
+  }catch(e){
+    document.getElementById('wx-err').textContent='❌ '+e.message;
+    document.getElementById('wx-err').style.display='block';
+    document.getElementById('wx-empty').style.display='block';
+  }finally{btn.textContent='RECHERCHER';btn.disabled=false;}
+}
+
+function wxCity(c){document.getElementById('wx-inp').value=c;wxFetch(c);}
+
+function renderWx(d){
+  const wmo=WMO[d.code]||{i:'❓',d:'Inconnu'};
+  const sc=calcFpvScore(d.wind,d.gusts,d.precip,d.vis,d.code);
+  const C=s=>scoreColor(s);
+  const L=s=>scoreLabel(s);
+  const Wc=v=>v<5?'var(--ok)':v<9?'var(--warn)':'var(--red)';
+  document.getElementById('wx-score').textContent=sc;
+  document.getElementById('wx-score').style.color=C(sc);
+  document.getElementById('wx-score-lbl').textContent=L(sc);
+  document.getElementById('wx-score-lbl').style.color=C(sc);
+  document.getElementById('wx-score-card').style.borderColor=C(sc).replace('var(--ok)','#1adb6b').replace('var(--warn)','#f5a300').replace('var(--red)','#e8321c');
+  document.getElementById('wx-icon').textContent=wmo.i;
+  document.getElementById('wx-desc').textContent=wmo.d;
+  document.getElementById('wx-temp').textContent=d.temp+'°C';
+  document.getElementById('wx-city-lbl').textContent='📍 '+d.city.charAt(0).toUpperCase()+d.city.slice(1);
+  document.getElementById('wx-metrics').innerHTML=[
+    ['Vent moyen',`${d.wind.toFixed(1)} m/s`,`${(d.wind*3.6).toFixed(0)} km/h`,Wc(d.wind)],
+    ['Rafales',`${d.gusts.toFixed(1)} m/s`,`${(d.gusts*3.6).toFixed(0)} km/h`,Wc(d.gusts)],
+    ['Visibilité',`${d.vis.toFixed(1)} km`,d.vis>=5?'Bonne':'Réduite',d.vis>=5?'var(--ok)':'var(--red)'],
+    ['Précipitations',`${d.precip} mm`,d.precip===0?'Sec ✓':'Humide ✗',d.precip===0?'var(--ok)':'var(--red)'],
+    ['Humidité',`${d.hum}%`,d.hum<80?'OK':'Élevée',d.hum<80?'var(--ok)':'var(--warn)'],
+  ].map(([l,v,s,col])=>`<div class="wx-card"><div class="wx-sub" style="margin-bottom:4px;color:var(--t3)">${l}</div><div class="wx-val" style="color:${col}">${v}</div><div class="wx-sub" style="color:${col}">${s}</div></div>`).join('');
+  let adv='';
+  if(d.wind<=5&&d.precip===0&&sc>=75)adv='<span style="color:var(--ok)">✅ Conditions idéales. Parfait pour tous les styles de vol — freestyle, long range et cinématique.</span>';
+  else if(d.wind>5&&d.wind<=9)adv='<span style="color:var(--warn)">⚠️ Vent modéré — pilotage actif requis. Évite les manœuvres serrées près des obstacles.</span>';
+  else if(d.wind>9)adv='<span style="color:var(--red)">❌ Vent trop fort. Vol fortement déconseillé — risque de perte de contrôle.</span>';
+  if(d.precip>0)adv+='<br><span style="color:var(--red)">❌ Précipitations — les composants électroniques ne sont pas étanches.</span>';
+  if(sc<30)adv+='<br><span style="color:var(--red)">🚫 Conditions dangereuses. Ne vole pas aujourd\'hui.</span>';
+  document.getElementById('wx-advice-txt').innerHTML=`<div style="font-size:12px;line-height:1.8">${adv||'<span style="color:var(--t3)">Conditions intermédiaires — évalue selon ton niveau.</span>'}</div>`;
+  document.getElementById('wx-res').style.display='block';
+  document.getElementById('wx-empty').style.display='none';
+}
+
+/* ════════════════════════════════════════════════════════════
+   SIMULATEURS
+   ════════════════════════════════════════════════════════════ */
+function buildSims(){
+  document.querySelectorAll('.tab[data-stab]').forEach(tab=>{
+    tab.onclick=()=>{
+      document.querySelectorAll('.tab[data-stab]').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.stab').forEach(s=>s.style.display='none');
+      document.getElementById('sim-'+tab.dataset.stab).style.display='block';
+    };
+  });
+  const grid=document.getElementById('sim-grid');
+  SIMS.forEach(sim=>{
+    const div=document.createElement('div');
+    div.className='sim';
+    const stars='★'.repeat(sim.real)+'<span style="color:var(--b2)">'+'★'.repeat(5-sim.real)+'</span>';
+    const platIcon=sim.plateform.includes('Android')||sim.plateform.includes('iOS')?'📱':sim.plateform.includes('Console')||sim.plateform.includes('Xbox')||sim.plateform.includes('PS')?'🎮':'💻';
+    div.innerHTML=`
+      <div class="sim-top" style="border-color:${sim.col}">
+        <div class="flex" style="justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <div style="font-family:var(--fd);font-size:22px;letter-spacing:2px">${sim.n}</div>
+            <div style="font-size:10px;color:var(--t3);letter-spacing:1px;margin-top:2px">${sim.level}</div>
+          </div>
+          <div class="sim-score" style="color:${sim.col}">${sim.score}</div>
+        </div>
+        <div class="flex fw gap6">
+          <span class="tag" style="color:${sim.col};border-color:${sim.col}">${sim.tag.toUpperCase()}</span>
+          <span class="tag tag-dim">${platIcon} ${sim.plateform.split('/')[0].trim()}</span>
+          ${sim.free?'<span class="tag tag-ok">GRATUIT</span>':''}
+        </div>
+      </div>
+      <div class="sim-body">
+        <div class="flex" style="justify-content:space-between">
+          <div>
+            <div class="label">Prix</div>
+            <div style="font-family:var(--fd);font-size:20px;letter-spacing:1px">${sim.price}</div>
+          </div>
+          <div>
+            <div class="label">Réalisme</div>
+            <div style="font-size:16px">${stars}</div>
+          </div>
+        </div>
+        <div>
+          <div class="label">Config PC min.</div>
+          <div style="font-size:11px;color:var(--t3)">${sim.pc}</div>
+        </div>
+        <ul class="li-pro">
+          ${sim.pros.map(p=>`<li class="p">${p}</li>`).join('')}
+          ${sim.cons.map(c=>`<li class="c">${c}</li>`).join('')}
+        </ul>
+        <a href="${sim.yt}" target="_blank" class="yt-btn">
+          <span style="color:var(--red)">▶</span> VOIR GAMEPLAY SUR YOUTUBE
+        </a>
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+  renderQuiz();
+}
+
+let qStep=0,qAns={};
+function renderQuiz(){
+  const cont=document.getElementById('sim-quiz');
+  if(qStep>=QUIZ_Q.length){
+    const rec=getSimRec();
+    cont.innerHTML=`
+      <div style="max-width:520px;margin:0 auto">
+        <div class="label" style="color:var(--ok)">✅ RECOMMANDATION PERSONNALISÉE</div>
+        <div class="sim" style="border-color:${rec.col};margin-bottom:16px">
+          <div class="sim-top" style="border-color:${rec.col}">
+            <div style="font-family:var(--fd);font-size:28px;letter-spacing:2px;color:${rec.col}">${rec.n}</div>
+            <div style="font-size:11px;color:var(--t3);margin:4px 0 10px">${rec.level}</div>
+            <div class="flex fw gap6">
+              <span class="tag" style="color:${rec.col};border-color:${rec.col}">${rec.tag.toUpperCase()}</span>
+              ${rec.free?'<span class="tag tag-ok">GRATUIT</span>':''}
+            </div>
+          </div>
+          <div class="sim-body">
+            <div style="font-family:var(--fd);font-size:32px;letter-spacing:1px">${rec.price}</div>
+            <ul class="li-pro">${rec.pros.map(p=>`<li class="p">${p}</li>`).join('')}</ul>
+            <a href="${rec.yt}" target="_blank" class="yt-btn"><span style="color:var(--red)">▶</span> VOIR GAMEPLAY</a>
+          </div>
+        </div>
+        <button class="btn btn-ghost" onclick="resetQuiz()">↺ Recommencer le quiz</button>
+      </div>
+    `;
+    return;
+  }
+  const q=QUIZ_Q[qStep];
+  cont.innerHTML=`
+    <div style="max-width:480px;margin:0 auto">
+      <div class="label">${qStep+1} / ${QUIZ_Q.length}</div>
+      <div style="height:1px;background:var(--b1);margin:6px 0 20px;overflow:hidden">
+        <div style="height:100%;width:${(qStep+1)/QUIZ_Q.length*100}%;background:var(--red);transition:width .3s"></div>
+      </div>
+      <div style="font-family:var(--fd);font-size:24px;letter-spacing:2px;margin-bottom:20px">${q.q}</div>
+      ${q.opts.map(o=>`<button class="q-opt" onclick="ansQ('${q.id}','${o.replace(/'/g,"\\'")}')"> ${o}</button>`).join('')}
+    </div>
+  `;
+}
+function ansQ(id,opt){qAns[id]=opt;qStep++;renderQuiz();}
+function resetQuiz(){qStep=0;qAns={};renderQuiz();}
+function getSimRec(){
+  const a=qAns;
+  // Mobile → only mobile options
+  if(a.plateform&&(a.plateform.includes('Téléphone')||a.plateform.includes('tablette'))){
+    if(a.budget==='💸 Gratuit uniquement')return SIMS.find(s=>s.n==='Tiny Whoop GO');
+    return SIMS.find(s=>s.n==='FPV Freerider Recharged');
+  }
+  // Console
+  if(a.plateform&&a.plateform.includes('Console'))return SIMS.find(s=>s.n==='Liftoff');
+  // Free only
+  if(a.budget==='💸 Gratuit uniquement')return SIMS.find(s=>s.free&&s.n!=='Tiny Whoop GO');
+  // By goal
+  if(a.goal==='🏎️ Racing & compétition'&&a.level!=='🐣 Débutant complet')return SIMS.find(s=>s.n==='VelociDrone');
+  if(a.goal==='🏎️ Racing & compétition'&&a.level==='🐣 Débutant complet')return SIMS.find(s=>s.n==='Hotprops');
+  if(a.level==='🐣 Débutant complet')return SIMS.find(s=>s.n==='Uncrashed FPV');
+  if(a.goal==='🎬 Cinématique & voyage')return SIMS.find(s=>s.n==='Uncrashed FPV');
+  if(a.goal==='🎯 Découvrir le FPV')return SIMS.find(s=>s.n==='DRL Simulator');
+  return SIMS.find(s=>s.n==='Tryp FPV');
+}
+
+/* ════════════════════════════════════════════════════════════
+   GUIDE
+   ════════════════════════════════════════════════════════════ */
+function buildGuide(){
+  const cont=document.getElementById('guide-acc');
+  GUIDE_DATA.forEach(sec=>{
+    const acc=document.createElement('div');acc.className='acc';
+    const bid='gb-'+sec.id,aid='ga-'+sec.id;
+    acc.innerHTML=`
+      <button class="acc-h" onclick="toggleAcc('${bid}','${aid}')">
+        <span class="acc-h-title">${sec.t.toUpperCase()}</span>
+        <span class="acc-arr" id="${aid}">›</span>
+      </button>
+      <div class="acc-body" id="${bid}">
+        ${sec.subs.map((s,i)=>{
+          const sid=`${sec.id}-s${i}`;
+          return `<div class="acc-sub">
+            <button class="acc-sh" onclick="toggleSub('${sid}')">
+              <span class="acc-sh-txt">${s.t}</span>
+              <span id="${sid}-a" style="color:var(--t3)">+</span>
+            </button>
+            <div class="acc-sb" id="${sid}"><p>${s.b}</p></div>
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+    cont.appendChild(acc);
+  });
+}
+function toggleAcc(bid,aid){
+  document.getElementById(bid).classList.toggle('open');
+  document.getElementById(aid).classList.toggle('open');
+}
+function toggleSub(sid){
+  const b=document.getElementById(sid),a=document.getElementById(sid+'-a');
+  b.classList.toggle('open');a.textContent=b.classList.contains('open')?'−':'+';
+}
+
+/* ════════════════════════════════════════════════════════════
+   CONFIGURATEUR
+   ════════════════════════════════════════════════════════════ */
+let cfgT=null,cfgB=null;
+const TYPES=[
+  {id:'freestyle',icon:'🤸',label:'Freestyle',desc:'Tricks, flow, urban et nature'},
+  {id:'long_range',icon:'🌍',label:'Long Range',desc:'Distance, autonomie, exploration'},
+  {id:'racing',icon:'🏎️',label:'Racing',desc:'Vitesse, compétition, gate racing'},
+  {id:'cinematic',icon:'🎬',label:'Cinématique',desc:'Qualité image, stabilité, rendu HD'},
+];
+const BUDGETS=[
+  {id:'entry',price:'Budget',desc:'Rapport qualité/prix maximal'},
+  {id:'mid',price:'Premium',desc:'Performances et matériaux haut de gamme'},
+];
+function cfgStep(s){
+  ['s0','s1','s2'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.style.background=i<s?'var(--ok)':'var(--b1)';
+  });
+  const cont=document.getElementById('cfg-content');
+  if(s===0){
+    cont.innerHTML=`
+      <div style="font-family:var(--fd);font-size:22px;letter-spacing:2px;margin-bottom:16px">STYLE DE VOL</div>
+      <div class="g2 gap14">
+        ${TYPES.map(t=>`<button class="type-opt" onclick="selectType('${t.id}')">
+          <div style="font-size:32px;margin-bottom:10px">${t.icon}</div>
+          <h3 style="font-family:var(--fd);font-size:22px;letter-spacing:2px;margin-bottom:5px">${t.label.toUpperCase()}</h3>
+          <p style="font-size:11px;color:var(--t3);line-height:1.5">${t.desc}</p>
+        </button>`).join('')}
+      </div>
+    `;
+  } else if(s===1){
+    cont.innerHTML=`
+      <div style="font-family:var(--fd);font-size:22px;letter-spacing:2px;margin-bottom:16px">BUDGET</div>
+      <div class="g2 gap14">
+        ${BUDGETS.map(b=>`<button class="type-opt" onclick="selectBudget('${b.id}')">
+          <div style="font-family:var(--fd);font-size:36px;letter-spacing:1px;color:var(--red);margin:8px 0">${b.price.toUpperCase()}</div>
+          <p style="font-size:11px;color:var(--t3)">${b.desc}</p>
+        </button>`).join('')}
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="cfgStep(0)" style="margin-top:14px">← Retour</button>
+    `;
+  } else if(s===2){
+    cont.innerHTML=`
+      <div style="text-align:center;padding:44px 0">
+        <div style="font-size:48px;margin-bottom:16px">🔧</div>
+        <div style="font-family:var(--fd);font-size:28px;letter-spacing:2px;margin-bottom:8px">GÉNÉRER LE BUILD</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:24px">
+          ${TYPES.find(t=>t.id===cfgT)?.label.toUpperCase()} · ${BUDGETS.find(b=>b.id===cfgB)?.price.toUpperCase()}
+        </div>
+        <button class="btn btn-red" onclick="genBuild()">GÉNÉRER MON BUILD</button>
+        <br><button class="btn btn-ghost btn-sm" onclick="cfgStep(1)" style="margin-top:12px">← Retour</button>
+      </div>
+    `;
+  } else if(s===3){
+    const bld=BUILDS[cfgT]?.[cfgB]||BUILDS[cfgT]?.entry;
+    if(!bld){cfgStep(0);return;}
+    const total=bld.parts.reduce((a,p)=>a+p.p,0);
+    cont.innerHTML=`
+      <div class="flex" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+        <div style="font-family:var(--fd);font-size:24px;letter-spacing:2px">${bld.t.toUpperCase()}</div>
+        <span class="tag tag-dim">${bld.l}</span>
+      </div>
+      <div class="card" style="padding:0;margin-bottom:14px">
+        ${bld.parts.map(p=>`<div class="brow">
+          <div><span class="bcat">${p.c}</span><span>${p.n}</span><span class="bnote">${p.note?'— '+p.note:''}</span></div>
+          <div class="bprice">${p.p}€</div>
+        </div>`).join('')}
+        <div class="btotal">
+          <span style="font-family:var(--fd);font-size:14px;letter-spacing:2px">TOTAL ESTIMÉ</span>
+          <span style="font-family:var(--fd);font-size:28px;letter-spacing:1px">${total}€</span>
+        </div>
+      </div>
+      <div class="info ok" style="margin-bottom:14px">✓ Compatibilité vérifiée. Prix indicatifs AliExpress / Banggood / RaceDayQuads. Prévoir +25€ pour connecteurs, hélices de rechange et câbles.</div>
+      <button class="btn btn-ghost" onclick="resetCfg()">↺ Recommencer</button>
+    `;
+  }
+}
+function buildCfgSteps(){
+  const cont=document.getElementById('cfg-steps');
+  ['TYPE','BUDGET','BUILD'].forEach((l,i)=>{
+    const w=document.createElement('div');w.style.cssText='flex:1;display:flex;flex-direction:column;align-items:center;gap:5px';
+    w.innerHTML=`<div style="height:1px;width:100%;background:var(--b1)" id="s${i}"></div><div style="font-size:8px;letter-spacing:2px;color:var(--t3)">${l}</div>`;
+    cont.appendChild(w);
+  });
+}
+function selectType(t){cfgT=t;cfgStep(1);}
+function selectBudget(b){cfgB=b;cfgStep(2);}
+function genBuild(){cfgStep(3);}
+function resetCfg(){cfgT=null;cfgB=null;cfgStep(0);}
+
+/* ════════════════════════════════════════════════════════════
+   SPOTS
+   ════════════════════════════════════════════════════════════ */
+let spotF='Tous',openSpot=null,spotsMap=null,spotsMapInited=false;
+const ALL_SPOTS=[...SPOTS,...SPOTS2];
+const TYPES_S=['Tous','Freestyle','Cinématique','Racing','Long Range'];
+
+function buildSpots(){
+  // Sub-tabs
+  document.querySelectorAll('.tab[data-stab2]').forEach(tab=>{
+    tab.onclick=()=>{
+      document.querySelectorAll('.tab[data-stab2]').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.stab2').forEach(s=>s.style.display='none');
+      document.getElementById('stab-'+tab.dataset.stab2).style.display='block';
+      if(tab.dataset.stab2==='smap'){
+        // Wait for display:block to apply, then init or resize
+        setTimeout(()=>{
+          if(!spotsMapInited) initSpotsMap();
+          else spotsMap.invalidateSize();
+        },80);
+      }
+    };
+  });
+  // Filter bar
+  const fbar=document.getElementById('spot-filters');
+  TYPES_S.forEach(f=>{
+    const btn=document.createElement('button');
+    btn.className='fbtn'+(f===spotF?' active':'');btn.textContent=f;
+    btn.onclick=()=>{spotF=f;fbar.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderSpots();updateSpotsMapFilter();};
+    fbar.appendChild(btn);
+  });
+  renderSpots();
+  // Do NOT init map here — will init on first tab click or nav
+}
+
+function initSpotsMap(){
+  if(spotsMapInited)return;
+  const el=document.getElementById('spots-map');
+  if(!el||!window.L)return;
+  // Guard: must be visible to get proper size
+  if(el.offsetWidth===0){
+    setTimeout(initSpotsMap,200);return;
+  }
+  spotsMapInited=true;
+  spotsMap=L.map('spots-map',{zoomControl:true}).setView([50.252,2.785],7);
+
+  // Satellite ESRI
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'© Esri',maxZoom:18
+  }).addTo(spotsMap);
+
+  // Labels overlay
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'',maxZoom:18,opacity:0.55
+  }).addTo(spotsMap);
+
+  // Force correct size after render
+  setTimeout(()=>{ spotsMap.invalidateSize(); renderSpotsMapMarkers(); },100);
+
+  // Inject dark popup styles (shared with carte)
+  if(!document.getElementById('leaflet-dark-style')){
+    const st=document.createElement('style');
+    st.id='leaflet-dark-style';
+    st.innerHTML=`
+      .leaflet-popup-content-wrapper{background:#101010!important;border:1px solid #2a2a2a!important;border-radius:0!important;box-shadow:0 6px 24px rgba(0,0,0,.9)!important}
+      .leaflet-popup-tip{background:#101010!important}
+      .leaflet-popup-content{margin:14px 16px!important;font-family:'DM Mono',monospace!important;font-size:12px!important;color:#ede8df!important}
+      .leaflet-popup-close-button{color:#7a7a7a!important;top:6px!important;right:8px!important}
+      .fpv-tt{background:#101010!important;border:1px solid #333!important;color:#7a7a7a!important;border-radius:0!important;font-family:'DM Mono',monospace!important;font-size:10px!important;letter-spacing:1px!important;padding:4px 9px!important;box-shadow:none!important}
+      .leaflet-container{font-family:'DM Mono',monospace!important}
+    `;
+    document.head.appendChild(st);
+  }
+
+  spotsMap._markers=[];
+}
+
+function renderSpotsMapMarkers(){
+  if(!spotsMap)return;
+  spotsMap._markers.forEach(m=>spotsMap.removeLayer(m));spotsMap._markers=[];
+  const list=spotF==='Tous'?ALL_SPOTS:ALL_SPOTS.filter(s=>s.t===spotF);
+  list.forEach(spot=>{
+    if(!spot.lat)return;
+    const col=SPOT_COLORS[spot.t]||'#888';
+    const icon=L.divIcon({
+      className:'',
+      html:`<div style="width:12px;height:12px;border-radius:50%;background:${col};border:2px solid #fff;box-shadow:0 0 6px rgba(0,0,0,.8)"></div>`,
+      iconSize:[12,12],iconAnchor:[6,6],
+    });
+    const dc=['','Faible','Modéré','Élevé','Dangereux','Extrême'][spot.d];
+    const m=L.marker([spot.lat,spot.lon],{icon})
+      .bindTooltip(spot.n,{className:'fpv-tt',direction:'top'})
+      .bindPopup(`<div style="min-width:200px">
+        <div style="font-family:var(--fd);font-size:15px;letter-spacing:1px;margin-bottom:4px;color:${col}">${spot.n.toUpperCase()}</div>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:8px">📍 ${spot.v}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <span style="padding:2px 7px;border:1px solid ${col};color:${col};font-size:9px;letter-spacing:1px">${spot.t.toUpperCase()}</span>
+          <span style="padding:2px 7px;border:1px solid var(--b2);color:var(--t3);font-size:9px;letter-spacing:1px">${spot.legal?'LÉGAL':'RISQUÉ'}</span>
+          <span style="padding:2px 7px;border:1px solid var(--b2);color:var(--t3);font-size:9px">⚡ ${dc}</span>
+        </div>
+        <div style="font-size:11px;color:var(--t2);line-height:1.6">${spot.desc}</div>
+      </div>`,{maxWidth:280})
+      .addTo(spotsMap);
+    spotsMap._markers.push(m);
+  });
+}
+
+function updateSpotsMapFilter(){
+  renderSpotsMapMarkers();
+}
+
+function renderSpots(){
+  const cont=document.getElementById('spots-list');
+  const list=spotF==='Tous'?ALL_SPOTS:ALL_SPOTS.filter(s=>s.t===spotF);
+  cont.innerHTML='';
+  list.forEach(spot=>{
+    const dc=['','var(--ok)','var(--warn)','var(--warn)','var(--red)','var(--red)'][spot.d];
+    const dl=['','Faible','Modéré','Élevé','Dangereux','Extrême'][spot.d];
+    const div=document.createElement('div');
+    div.className='spot'+(openSpot===spot.id?' open':'');
+    div.innerHTML=`
+      <div class="flex" style="justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-family:var(--fd);font-size:18px;letter-spacing:1px;margin-bottom:2px">${spot.n.toUpperCase()}</div>
+          <div style="font-size:10px;color:var(--t3);letter-spacing:1px">📍 ${spot.v}</div>
+        </div>
+        <span class="tag ${spot.legal?'tag-ok':'tag-red'}">${spot.legal?'LÉGAL':'RISQUÉ'}</span>
+      </div>
+      <div class="flex fw gap6 mb10">
+        <span class="tag tag-dim">${spot.t.toUpperCase()}</span>
+        <span class="tag" style="color:${dc};border-color:${dc}">⚡ ${dl.toUpperCase()}</span>
+      </div>
+      <div style="display:${openSpot===spot.id?'block':'none'}" id="sd-${spot.id}">
+        <p style="font-size:12px;color:var(--t3);line-height:1.8;margin-bottom:10px">${spot.desc}</p>
+        <div class="stags">${spot.tags.map(t=>`<span class="tag tag-dim" style="font-size:9px">#${t}</span>`).join('')}</div>
+        ${!spot.legal?`<div class="info bad" style="margin-top:10px;font-size:11px">⚠️ Zone non officiellement autorisée — vérifiez avant de voler.</div>`:''}
+      </div>
+      <button style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-top:10px" onclick="toggleSpot(${spot.id})">
+        ${openSpot===spot.id?'▲ RÉDUIRE':'▼ VOIR DÉTAILS'}
+      </button>
+    `;
+    cont.appendChild(div);
+  });
+}
+function toggleSpot(id){openSpot=openSpot===id?null:id;renderSpots();}
+
+/* ════════════════════════════════════════════════════════════
+   CARTE MAP — satellite ESRI + zones dessinées Leaflet
+   ════════════════════════════════════════════════════════════ */
+// Zones aériennes France — sources DGAC/SIA
+const AIRSPACE_ZONES=[
+  // ── INTERDITES (rouge) ───────────────────────────────────
+  {type:'forbidden',name:'CTR Paris — Roissy CDG',lat:49.009,lon:2.547,r:15000,desc:"Zone CTR Roissy-Charles-de-Gaulle. Survol totalement interdit sans coordination ATC. Espace aérien classe D/C."},
+  {type:'forbidden',name:'Zone P23 — Paris Centre',lat:48.8566,lon:2.3522,r:5000,desc:"Zone de protection nationale permanente. Survol interdit pour raisons de sécurité d'État. Classe P."},
+  {type:'forbidden',name:'CTR Orly',lat:48.726,lon:2.358,r:10000,desc:"CTR Orly. Interdiction totale sans autorisation Tour de Contrôle Orly."},
+  {type:'forbidden',name:'BA107 Villacoublay',lat:48.774,lon:2.201,r:6000,desc:"Base aérienne militaire 107. Interdiction permanente de survol. Classe R."},
+  {type:'forbidden',name:'CTR Bordeaux-Mérignac',lat:44.828,lon:-0.715,r:12000,desc:"CTR Bordeaux Mérignac. Zone contrôlée classe D. Interdiction sans coordination."},
+  {type:'forbidden',name:"CTR Lyon Saint-Exupéry",lat:45.726,lon:5.081,r:10000,desc:"CTR Lyon. Zone très fréquentée, interdiction sans autorisation."},
+  {type:'forbidden',name:'CTR Toulouse-Blagnac',lat:43.629,lon:1.367,r:12000,desc:"CTR Toulouse. Zone Airbus, très active. Interdiction totale."},
+  {type:'forbidden',name:"CTR Nice Côte d'Azur",lat:43.658,lon:7.215,r:8000,desc:"CTR Nice. Zone contrôlée méditerranéenne."},
+  {type:'forbidden',name:'CTR Strasbourg Entzheim',lat:48.538,lon:7.628,r:8000,desc:"CTR Strasbourg. Zone contrôlée classe D."},
+  {type:'forbidden',name:'CTR Nantes Atlantique',lat:47.153,lon:-1.609,r:9000,desc:"CTR Nantes. Interdiction sans coordination ATC."},
+  {type:'forbidden',name:'CTR Marseille Provence',lat:43.438,lon:5.221,r:11000,desc:"CTR Marseille-Provence. Zone très active, interdiction totale."},
+  {type:'forbidden',name:'CTR Lille-Lesquin',lat:50.563,lon:3.089,r:8000,desc:"CTR Lille-Lesquin. Zone contrôlée proche frontière belge."},
+  {type:'forbidden',name:'CTR Montpellier',lat:43.576,lon:3.963,r:7000,desc:"CTR Montpellier. Zone contrôlée classe D."},
+  {type:'forbidden',name:'CTR Rennes Saint-Jacques',lat:48.069,lon:-1.731,r:7000,desc:"CTR Rennes. Zone contrôlée."},
+  {type:'forbidden',name:'CTR Brest Bretagne',lat:48.447,lon:-4.418,r:9000,desc:"CTR Brest. Zone militaire et civile contrôlée."},
+  {type:'forbidden',name:'BA702 Avord',lat:47.053,lon:2.633,r:9000,desc:"Base aérienne militaire Avord. Zone R. Interdiction permanente."},
+  {type:'forbidden',name:'BA126 Solenzara (Corse)',lat:41.924,lon:9.406,r:8000,desc:"Base aérienne militaire Corse. Zone R permanente."},
+  {type:'forbidden',name:'CTR Ajaccio',lat:41.923,lon:8.802,r:7000,desc:"CTR Ajaccio. Zone contrôlée insulaire."},
+  {type:'forbidden',name:'CTR Clermont-Ferrand',lat:45.787,lon:3.169,r:7000,desc:"CTR Clermont-Aulnat. Zone contrôlée."},
+  {type:'forbidden',name:'CTR Caen',lat:49.173,lon:-0.449,r:7000,desc:"CTR Caen Carpiquet. Zone contrôlée."},
+  {type:'forbidden',name:'CTR Tours',lat:47.432,lon:0.727,r:7000,desc:"CTR Tours Val de Loire. Zone contrôlée."},
+  {type:'forbidden',name:'CTR Dunkerque',lat:51.046,lon:2.578,r:4000,desc:"CTR Dunkerque-Mardyck. Zone contrôlée côtière."},
+  {type:'forbidden',name:'Base de Cherbourg-Maupertus',lat:49.650,lon:-1.470,r:5000,desc:"Aéroport militaire/civil. Zone contrôlée."},
+  // ── RESTREINTES (orange) ─────────────────────────────────
+  {type:'restricted',name:'Zone R77 Versailles',lat:48.804,lon:2.122,r:6000,desc:"Zone restreinte autour du Château de Versailles. Vol possible sous conditions (< 50m AGL, hors horaires spécifiques, coordination préfecture)."},
+  {type:'restricted',name:'Zone R Fontainebleau',lat:48.40,lon:2.68,r:5000,desc:"Forêt domaniale. Secteurs restreints selon accords ONF. Vérifier sur Géoportail."},
+  {type:'restricted',name:'Zone R Nucléaire Cattenom',lat:49.401,lon:6.220,r:3000,desc:"Zone protégée centrale nucléaire. Rayon interdit autour du site."},
+  {type:'restricted',name:'Zone R Nucléaire Chinon',lat:47.243,lon:0.172,r:3000,desc:"Zone protégée centrale nucléaire de Chinon."},
+  {type:'restricted',name:'Zone R Nucléaire Flamanville',lat:49.536,lon:-1.889,r:3000,desc:"Zone protégée centrale nucléaire Flamanville."},
+  {type:'restricted',name:'Zone R Nucléaire Cruas',lat:44.629,lon:4.757,r:3000,desc:"Zone protégée centrale nucléaire Cruas-Meysse."},
+  {type:'restricted',name:'Zone R Camp de Mourmelon',lat:49.158,lon:4.394,r:10000,desc:"Zone militaire d'entraînement. Restreinte lors des exercices. Vérifier NOTAM."},
+  {type:'restricted',name:'Zone R Cap Blanc-Nez',lat:50.921,lon:1.717,r:2500,desc:"Grand Site National. Zone sensible. Vol déconseillé sans autorisation."},
+  {type:'restricted',name:'Zone R Larzac Militaire',lat:43.981,lon:3.166,r:12000,desc:"Camp militaire du Larzac. Zone restreinte lors des exercices. Vérifier NOTAM."},
+  {type:'restricted',name:'Zone R Forêt de Rambouillet',lat:48.640,lon:1.813,r:5000,desc:"Résidence présidentielle. Zone R permanente autour du domaine."},
+  {type:'restricted',name:'Zone R Nucléaire Gravelines',lat:50.986,lon:2.134,r:3000,desc:"Zone protégée centrale nucléaire Gravelines. La plus puissante d'Europe."},
+  {type:'restricted',name:'Zone R Mémorial Verdun',lat:49.195,lon:5.434,r:3000,desc:"Site historique protégé. Zone sensible. Coordination recommandée."},
+  {type:'restricted',name:'Zone R Nucléaire Bugey',lat:45.799,lon:5.270,r:3000,desc:"Zone protégée centrale nucléaire du Bugey."},
+  // ── AUTORISÉES (vert) ────────────────────────────────────
+  {type:'authorized',name:'Plaine de Mercatel',lat:50.252,lon:2.785,r:4000,desc:"Zone idéale long range et freestyle. Plaine agricole totalement plate, aucun obstacle. Catégorie A1/A3. Ton terrain de jeu !"},
+  {type:'authorized',name:'Plaine de la Beauce',lat:48.09,lon:1.75,r:8000,desc:"Immense plaine agricole. Zone catégorie ouverte A1/A3. Dégagement 15km+."},
+  {type:'authorized',name:'Plaine de Champagne',lat:49.12,lon:3.84,r:9000,desc:"Plateau champenois. Excellente zone pour long range et tests portée ELRS."},
+  {type:'authorized',name:'Plaine des Landes',lat:44.20,lon:-1.23,r:10000,desc:"Grande forêt de pins. Zones dégagées pour le vol. Peu de contraintes."},
+  {type:'authorized',name:'Plaine de la Crau',lat:43.55,lon:4.95,r:9000,desc:"Plaine caillouteuse unique. Excellent dégagement, catégorie ouverte."},
+  {type:'authorized',name:"Plaine d'Alsace",lat:48.07,lon:7.36,r:8000,desc:"Grande plaine rhénane. Zone peu contrainte entre Vosges et Rhin."},
+  {type:'authorized',name:'Plaine Flamande',lat:50.79,lon:2.49,r:7000,desc:"Plaine de Flandre très dégagée. Idéale pour le long range nord."},
+];
+
+let carteMap=null,carteInited=false;
+function initCarteMap(){
+  if(carteInited)return;
+  const el=document.getElementById('carte-map');
+  if(!el||!window.L)return;
+  carteInited=true;
+  carteMap=L.map('carte-map',{zoomControl:true}).setView([46.8,2.3],6);
+
+  // ── Satellite ESRI ──
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'© Esri World Imagery · Données zones DGAC/SIA',maxZoom:18
+  }).addTo(carteMap);
+
+  // ── Labels overlay ──
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'',maxZoom:18,opacity:0.55
+  }).addTo(carteMap);
+
+  // ── Zones dessinées directement (aucun CORS, toujours visible) ──
+  const COLS={
+    forbidden:{fill:'#e8321c',stroke:'#c02010'},
+    restricted:{fill:'#f5a300',stroke:'#c07800'},
+    authorized:{fill:'#1adb6b',stroke:'#10a050'},
+  };
+  const LABELS={forbidden:'🔴 INTERDIT',restricted:'🟡 RESTREINT',authorized:'🟢 AUTORISÉ'};
+
+  AIRSPACE_ZONES.forEach(z=>{
+    const c=COLS[z.type];
+    const circle=L.circle([z.lat,z.lon],{
+      radius:z.r,
+      color:c.stroke,weight:1.5,
+      fillColor:c.fill,fillOpacity:0.38,
+    }).addTo(carteMap);
+
+    // Popup avec infos
+    circle.bindPopup(`
+      <div style="min-width:210px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:4px;color:${c.fill}">${z.name.toUpperCase()}</div>
+        <div style="font-size:10px;color:#aaa;margin-bottom:8px;letter-spacing:1px">${LABELS[z.type]} · Rayon ${(z.r/1000).toFixed(0)} km</div>
+        <div style="font-size:11px;color:#ccc;line-height:1.6">${z.desc}</div>
+      </div>
+    `,{maxWidth:260});
+
+    // Tooltip au survol
+    circle.bindTooltip(z.name,{
+      className:'fpv-tt',sticky:true
+    });
+  });
+
+  // ── Inject popup styles ──
+  if(!document.getElementById('leaflet-dark-style')){
+    const st=document.createElement('style');
+    st.id='leaflet-dark-style';
+    st.innerHTML=`
+      .leaflet-popup-content-wrapper{background:#101010!important;border:1px solid #2a2a2a!important;border-radius:0!important;box-shadow:0 6px 24px rgba(0,0,0,.9)!important}
+      .leaflet-popup-tip{background:#101010!important}
+      .leaflet-popup-content{margin:14px 16px!important;font-family:'DM Mono',monospace!important;font-size:12px!important;color:#ede8df!important}
+      .leaflet-popup-close-button{color:#7a7a7a!important;top:6px!important;right:8px!important}
+      .fpv-tt{background:#101010!important;border:1px solid #333!important;color:#7a7a7a!important;border-radius:0!important;font-family:'DM Mono',monospace!important;font-size:10px!important;letter-spacing:1px!important;padding:4px 9px!important;box-shadow:none!important}
+      .leaflet-container{font-family:'DM Mono',monospace!important}
+    `;
+    document.head.appendChild(st);
+  }
+}
+
+function carteLocate(){
+  if(!navigator.geolocation||!carteMap)return;
+  navigator.geolocation.getCurrentPosition(({coords:{latitude:la,longitude:lo}})=>{
+    carteMap.setView([la,lo],11);
+    L.circleMarker([la,lo],{color:'#e8321c',fillColor:'#e8321c',fillOpacity:0.95,radius:8,weight:2})
+      .addTo(carteMap).bindPopup('<div style="color:#e8321c;font-family:Bebas Neue;font-size:14px;letter-spacing:1px">📍 MA POSITION</div>').openPopup();
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   ASSISTANT FPV LOCAL — base de connaissances embarquée
+   100% gratuit · aucune API · aucune clé requise
+   ════════════════════════════════════════════════════════════ */
+const FPV_KB=[
+  {k:['débuter','commencer','débutant','start','premier','par où','comment faire'],r:`🚀 GUIDE DÉBUTANT FPV
+
+① Simulateur d'abord (Uncrashed ou DRL Sim gratuit) — 15-20h minimum
+② Tiny Whoop indoor : BetaFPV Meteor65 Pro (~60€) pour apprendre sans risque
+③ Premier 5 pouces : build ou BNF (~300-400€)
+④ Rejoins un club FPV local : ffam.fr
+
+📋 Obligatoire en France :
+• Enregistrement AlphaTango (gratuit, > 800g)
+• Assurance RC (check ta multirisque habitation !)
+• Vérification zones Géoportail avant chaque vol
+• Altitude max : 120m en catégorie ouverte`},
+
+  {k:['alphatango','enregistrement','immatriculation','dgac','légal','réglementation','loi','légalement','autorisation','interdit'],r:`⚖️ RÉGLEMENTATION FRANCE 2024
+
+📋 Obligatoire si drone > 800g :
+• AlphaTango (alphatango.aviation-civile.gouv.fr) — gratuit
+• Assurance RC (multirisque habitation souvent suffisante)
+• Brevet théorique DGAC si catégorie A2 ou STS
+
+📏 Catégorie ouverte (loisir standard) :
+• Altitude max : 120m AGL
+• Vol à vue (VLOS) — observateur requis en FPV
+• Interdit au-dessus des personnes, foules, zones urbaines
+• Interdit de nuit sans dérogation préfectorale
+• CTR (autour des aéroports) : interdiction totale
+
+🔍 Vérification zones : Géoportail.gouv.fr (onglet Carte FPV de ce site !)`},
+
+  {k:['assurance','assurer','couverture','responsabilité','sinistre'],r:`🛡️ ASSURANCE DRONE FPV
+
+✅ Vérifie d'abord ta multirisque habitation — elle couvre souvent les drones loisir !
+
+Options spécialisées :
+• FFAM (~30€/an) : adhésion club affilié, couverture complète
+• MAIF : extension drone disponible
+• Allianz : formule RC aéromodélisme
+• Groupama : RC activité de loisir
+
+💡 L'assurance FFAM via club est la solution la plus simple et la moins chère.`},
+
+  {k:['elrs','expresslrs','protocole','liaison radio','fréquence 900','fréquence 2.4'],r:`📡 EXPRESSLRS (ELRS) — LE STANDARD FPV
+
+Protocole open-source : latence < 2ms, portée excellente, robuste.
+
+📻 2.4 GHz vs 900 MHz :
+• 2.4 GHz → Freestyle & Racing : 3-8km, 500Hz refresh, antennes compactes
+• 900 MHz → Long Range : 20-50km+, pénétration obstacles
+
+🎮 Radios recommandées :
+• Budget : RadioMaster Pocket ELRS (~80€)
+• Gamepad : RadioMaster Zorro ELRS (~110€)
+• Référence : RadioMaster TX16S MkII (~165€)
+• Module externe : BetaFPV Micro TX (pour adapter ta radio actuelle)
+
+⚙️ Config : EdgeTX + ELRS Configurator pour flasher les RX`},
+
+  {k:['radio','radiocommande','zorro','pocket','tx16s','boxer','radiomaster','jumper','frsky'],r:`🎮 CHOIX DE RADIO FPV 2024
+
+💚 Budget (< 100€) :
+• RadioMaster Pocket ELRS : ultra compact, idéal débutant
+• Jumper T-Lite V2 : format gamepad économique
+
+💛 Mid-range (100-180€) :
+• RadioMaster Zorro ELRS : design Xbox, très ergonomique
+• RadioMaster Boxer : Hall gimbals, format compact
+
+🔴 Premium (180€+) :
+• RadioMaster TX16S MkII : référence absolue, tout en un
+• Jumper T20S : double module ELRS 2.4 + 900MHz natif
+
+📌 En 2024 : toutes tournent sous EdgeTX. ELRS intégré = meilleur choix. Évite FrSky.`},
+
+  {k:['analog','numérique','digital','dji','walksnail','hdzero','vidéo','lunettes','goggles','image','fpv','o3'],r:`📺 VIDÉO FPV : ANALOG vs DIGITAL
+
+🔵 ANALOGIQUE (recommandé débutant) :
+• Latence < 1ms — parfait racing
+• Image SD (480p) mais instantanée
+• Économique et robuste
+• Lunettes : Fatshark Recon 4 (130€), Skyzone SKY04X (300€)
+
+🟢 DIGITAL HD :
+• DJI O3 Air Unit (~250€) : meilleure image, 1080p60, latence ~25ms
+• Walksnail Avatar HD (~150€) : excellent rapport Q/P, 1080p
+• HDZero (~200€) : latence minimale, idéal racing HD
+
+🎯 Selon usage :
+• Débutant → Analog
+• Freestyle/Cinéma → DJI O3 ou Walksnail
+• Racing → HDZero ou Analog
+• Long range → DJI O3 (meilleur pour les recordings)`},
+
+  {k:['betaflight','pid','rates','configuration','fc','flight controller','firmware','blackbox','osd','configurer'],r:`⚙️ BETAFLIGHT — GUIDE COMPLET
+
+📥 Download : betaflight.com → Betaflight Configurator
+
+🔧 Étapes de base :
+① Flash le firmware (onglet Firmware Flasher)
+② Ports : UART1 → Récepteur Série (ELRS)
+③ Récepteur : ELRS / Serial → Save & Reboot
+④ Modes : ARM, Angle, Acro, Buzzer
+⑤ Calibre l'accéléromètre (drone plat sur table)
+⑥ Motors : vérifie le sens de rotation (PROPS IN)
+⑦ OSD : configure ton affichage (tension batterie = essentiel)
+⑧ Blackbox : active pour analyser les vols
+
+📊 PIDs par défaut en 2024 = excellents. Vole 10 sessions avant de toucher !
+📺 Référence : Joshua Bardwell sur YouTube`},
+
+  {k:['pid','tune','tuning','oscillation','vibration','propwash','props wash','réglage'],r:`🔧 PID TUNING FPV
+
+Commence TOUJOURS par les PIDs par défaut Betaflight — ils sont très bons.
+
+🔍 Problèmes et solutions :
+• Oscillations rapides (jello, shaking) → Baisse P de 10%
+• Props wash (turbulences après figure) → Monte D de 5-10%
+• Drone "mou", peu réactif → Monte P de 10%
+• Bruit anormal moteurs → Vérifie les filtres + RPM filter (DSHOT600)
+• Wobble lent → Monte I légèrement
+
+📐 Rates selon niveau :
+• Débutant : Max Rate 0.5-0.6, SuperRate 0.6
+• Intermédiaire : Max Rate 0.7, SuperRate 0.7
+• Expert : Max Rate 0.8+, SuperRate 0.8+
+
+🛠️ Utilise le Blackbox pour analyser les données de vol`},
+
+  {k:['construire','build','assembler','composant','liste matériel','cadre','frame'],r:`🔧 CONSTRUIRE UN 5 POUCES FPV
+
+📦 Liste complète :
+• Frame 5" : iFlight Nazgul Evoque (~55€) ou Armattan Chameleon (~95€)
+• Stack FC+ESC : Speedybee F405 V3 45A (~82€) — recommandé débutant
+• Moteurs ×4 : Emax Eco II 2306 2400KV (~48€) — 4S, excellent Q/P
+• Caméra : Runcam Nano 4 (~22€) — Analog Starlight
+• VTX : Rush Tank Solo 400mW (~28€)
+• Récepteur : ELRS EP1 Nano 2.4GHz (~18€)
+• Batterie ×2 : GNB 1300mAh 4S 100C (~44€)
+💰 Total entry level : ~300€
+
+🔩 Outils : Fer à souder 60W+ (TS80P), soudure 60/40, multimètre, Allen 2/2.5mm`},
+
+  {k:['moteur','kv','2207','2306','brushless','taille','pouce','t-motor','emax','xing'],r:`⚡ GUIDE MOTEURS FPV
+
+📏 Par taille de drone :
+• 2" Whoop : 1102-1103
+• 3" Toothpick : 1404-1408
+• 5" Standard : 2205-2208 ← le standard FPV
+• 7" Long Range : 2806-3115
+
+🔋 KV selon batterie :
+• 4S → 2400-2600KV pour 5 pouces
+• 6S → 1750-1950KV pour 5 pouces (plus puissant, recommandé racing)
+
+🏆 Marques fiables :
+• T-Motor Velox : qualité premium
+• XING2 : excellent rapport Q/P
+• Emax Eco II : budget imbattable
+• BrotherHobby : très apprécié freestyle`},
+
+  {k:['batterie','lipo','4s','6s','mah','charge','voltage','cellule','hv','gnb','tattu'],r:`🔋 BATTERIES LIPO FPV
+
+📊 Comprendre les specs :
+• 4S = 14.8V nominale (16.8V chargée) — standard freestyle
+• 6S = 22.2V nominale (25.2V chargée) — racing, plus de punch
+• mAh : 1300mAh racing, 1550mAh freestyle, 2000mAh+ cinéma
+
+⚡ Tensions sécurité :
+• Chargée : 4.20V/cell (4.35V HV)
+• Vol normal : 3.7-3.8V/cell
+• Alarme OSD : 3.5V/cell
+• ❌ Jamais sous 3.3V/cell = destruction garantie !
+
+🏆 Marques :
+• Tattu R-Line : référence qualité racing
+• GNB : excellent Q/P budget
+• CNHL : fiable, bon prix
+• Gens Ace : longue durée de vie
+
+🔌 Charge : balance LiPo uniquement, jamais sans surveillance. Stockage : 3.8V/cell`},
+
+  {k:['simulateur','sim','uncrashed','velocidrone','liftoff','drl','tryp','entraîner','apprendre','jouer'],r:`🎮 CHOISIR SON SIMULATEUR FPV
+
+🏆 TOP 5 en 2024 :
+
+① Uncrashed FPV — 16.99€ Steam — Score 92
+→ Meilleur pour débuter. Graphismes photoréalistes, physics excellentes.
+
+② VelociDrone — 19.99€ — Score 93
+→ Choix des pros racing. Physics ultra-réalistes. Multi-joueur.
+
+③ Tryp FPV — 12.99€ Steam — Score 85
+→ Excellent freestyle, prix accessible.
+
+④ Liftoff — 14.99€ Steam — Score 82
+→ Le plus populaire, disponible console (Xbox/PS4-5).
+
+⑤ DRL Simulator — Gratuit Steam — Score 68
+→ 100% gratuit pour commencer.
+
+📱 Mobile : Tiny Whoop GO (gratuit) ou FPV Freerider (4.99€ Android)
+
+💡 Minimum 15-20h de sim avant de voler en réel !`},
+
+  {k:['long range','gps','rth','return home','portée','distance','autonomie','7 pouces'],r:`🌍 LONG RANGE FPV
+
+🛠️ Build 7 pouces recommandé :
+• Frame : GEPRC Mark5 D7 7" (~65€)
+• FC : Matek F765-WING + 4in1 40A (~98€) — GPS natif
+• Moteurs ×4 : T-Motor F40 Pro IV 2400KV (~72€)
+• GPS : GEPRC M10 (~28€) — RTH indispensable !
+• RX : ELRS 900MHz (~25€) — portée 20-50km
+• Batterie : Li-ion 18650 4S2P DIY (~48€) — 20-30min vol
+
+⚙️ Betaflight pour LR :
+• Active GPS Rescue (Return to Home)
+• Failsafe sur RTH
+• Modes : Acro + Angle + GPS Rescue
+
+⚠️ En France : vol à vue (VLOS) obligatoire même en long range !`},
+
+  {k:['freestyle','trick','flip','roll','power loop','gap','manœuvre','figure','acro'],r:`🤸 FREESTYLE FPV — PROGRESSER
+
+📚 Progression (simulateur d'abord !) :
+
+🥉 Débutant :
+• Flip avant/arrière (Pitch)
+• Roll gauche/droite
+• Split S (demi-boucle en descente)
+
+🥈 Intermédiaire :
+• Power loop (boucle autour d'un obstacle)
+• Matty flip
+• Juicy flip
+
+🥇 Avancé :
+• Twisted power loop
+• Chop & roll
+• Gap flying (passages entre obstacles)
+
+💡 Mode Acro obligatoire (pas de stabilisation)
+📺 S'inspirer de : Rotor Riot, Mr Steele, Ummagawd (YouTube)`},
+
+  {k:['spot','voler','où voler','endroit','lieu','légal','trouver'],r:`📍 TROUVER DES SPOTS FPV
+
+🔍 Méthode des pros :
+① Google Maps satellite → "zone industrielle", "carrière", "friche"
+② Vérifie sur Géoportail que c'est libre (hors rouge/orange)
+③ Demande la permission si terrain privé (souvent accordée !)
+
+🏆 Meilleurs types :
+• 🌾 Plaines agricoles : long range, légal, vaste
+• 🏚️ Friches industrielles : freestyle, permission propriétaire
+• ⛏️ Carrières abandonnées : obstacles naturels, souvent accessible
+• 🪨 Terrils (Nord/62) : vue panoramique, freestyle
+• 🏗️ Zones industrielles weekend : parking vides, légal
+
+📱 Apps : Géoportail (officielle), DroneSpot, OpenEx (urbex)
+
+💡 Ton meilleur spot : Plaine de Mercatel (50.252, 2.785) — plat, légal, dégagé !`},
+
+  {k:['problème','bug','arme','arm','bind','signal','failsafe','crash','réparer','vibration','bruit'],r:`🔧 DÉPANNAGE FPV
+
+❌ Drone ne s'arme pas :
+• Throttle pas en bas à fond ?
+• Mode ARM configuré dans Betaflight → Modes ?
+• Gyroscope calibré ?
+• Erreur moteur → onglet Motors en sécurité
+
+❌ Perte de signal radio :
+• Antennes bien orientées (perpendiculaires)
+• Failsafe configuré (disarm ou RTH) ?
+• Puissance TX dans ELRS Configurator ?
+
+❌ Vidéo parasitée (analog) :
+• Condensateur 1000µF sur la batterie principale
+• Sépare câbles vidéo / câbles moteurs
+• Fréquence VTX en conflit ?
+
+❌ Vibrations / jello :
+• Hélices équilibrées et intactes ?
+• Vis moteurs serrées ?
+• Soft mounting FC (plots silicone) ?
+• Filtres Betaflight trop faibles ?`},
+
+  {k:['soudure','souder','fer','réparer','dessouder','connecteur','xt30','xt60','panne'],r:`🔧 SOUDURE FPV
+
+🛠️ Matériel recommandé :
+• Fer : TS80P ou TS101 (65W min) — les fers < 40W ne fondent pas bien
+• Soudure : 60/40 rosin core 0.8mm
+• Flux liquide : améliore considérablement les joints
+• Tresse dessoudante ou pompe
+
+📋 Technique :
+① Étame les deux surfaces séparément
+② Chauffe les deux parties simultanément 2-3 secondes
+③ Apporte l'étain — fondu en 1-2s = bonne température
+④ Retire le fer → laisse refroidir SANS bouger
+⑤ Joint brillant et lisse ✓ | mat et grumeleux ✗ (refaire)
+
+⚡ Connecteurs : XT30 (< 30A, 3 pouces), XT60 (< 60A, 5 pouces), XT90 (gros builds)`},
+
+  {k:['tiny whoop','whoop','indoor','intérieur','micro','betafpv','meteor','minidrone'],r:`🏠 TINY WHOOP — DÉBUTER EN INDOOR
+
+🏆 Top 2024 :
+• BetaFPV Meteor65 Pro (~65€) : le meilleur starter brushless 1S
+• BetaFPV Pavo25 (~120€) : 2.5", indoor/outdoor
+• GEPRC CineLog25 : mini HD, excellent
+
+✅ Pourquoi commencer par un Whoop :
+• Hélices protégées = moins de casse
+• Vol indoor = pas de vent, pas de zone réglementée
+• Idéal pour apprendre le mode Acro sans risque
+• Batterie 1S rechargée en 15min
+
+🔋 Batterie : 1S 300-450mAh HV
+⚡ Chargeur : board multi-slots USB-C`},
+
+  {k:['cinéma','cinématique','smooth','film','fpv cinéma','stabilisation','fluide'],r:`🎬 FPV CINÉMATIQUE
+
+🛠️ Build recommandé :
+• Frame GEPRC Mark5 HD 5" (~78€) — peu de vibrations
+• Stack Speedybee F405 V3 (~82€)
+• Moteurs T-Motor Velox V2 2207 (~88€) — doux et précis
+• DJI O3 Air Unit (~250€) — meilleure image
+• Batterie 4S Tattu 1550mAh (~55€)
+
+📸 Techniques cinéma :
+• Angle mode ou Horizon pour stabilité
+• Rates très faibles (mouvements amples et doux)
+• GoPro Hero 12 ou Insta360 en externe
+• Post-prod : Gyroflow pour stabilisation complémentaire
+
+📺 S'inspirer de : Johnny FPV, Le Drib, Steele cinematics (YouTube)`},
+
+  {k:['racing','race','compétition','gate','piste','circuit','vitesse','multigp'],r:`🏎️ FPV RACING — COMMENCER
+
+🛠️ Build 5 pouces 6S entry :
+• Frame : Armattan Marmotte 5" (~65€)
+• Stack : Flywoo GOKU F745 (~85€)
+• Moteurs : XING2 2207 1855KV 6S (~96€)
+• VTX : TBS Unify Pro32 Nano (~45€)
+• Batterie ×4 : Tattu R-Line 1300mAh 6S 150C
+
+📡 Pourquoi 6S ? Plus de vitesse, moteurs plus froids, meilleur couple.
+
+🏁 Trouver des événements :
+• MultiGP France (sites affiliés)
+• Groupes Facebook "FPV Racing France"
+• Clubs locaux FFAM (ffam.fr)
+• Onglet Spots de ce site → filtre Racing`},
+
+  {k:['prix','budget','combien','coût','cher','économique','débutant budget'],r:`💰 BUDGETS FPV
+
+🟢 Ultra budget (~150€) :
+DRL Sim (gratuit) + Meteor65 Whoop (65€) + Radio Pocket ELRS (80€)
+
+🟡 Débutant complet (~500€) :
+Radio (80€) + Sim (17€) + Build 5" analog entry (300€) + Lunettes Fatshark (130€)
+
+🟠 Intermédiaire HD (~900€) :
+Radio TX16S (165€) + Build 5" Walksnail (500€) + Lunettes DJI Integra (400€)
+
+🔴 Pro (1500€+) :
+Radio + Build DJI O3 premium + Lunettes DJI Goggles 3 + 6 batteries
+
+💡 Progression recommandée : 1 Whoop → 1 5 pouces analog → upgrade HD`},
+
+  {k:['acheter','commander','boutique','site web','aliexpress','banggood','racedayquads','getfpv'],r:`🛒 OÙ ACHETER FPV
+
+🇫🇷 Europe (livraison rapide) :
+• RaceDayQuads.eu — excellent stock, service
+• UnmannedTech.co.uk — UK, large choix
+• FPVRacingDrones.fr — boutique française
+
+🌍 Asie (prix bas, 2-4 semaines) :
+• Banggood.com — très large catalogue
+• AliExpress — bon prix, vendeurs 4.8+ étoiles
+• GEPRC Store / iFlight Store — direct fabricant
+
+📦 Vocabulaire :
+• BNF (Bind and Fly) : drone prêt à voler, ajoute ton récepteur
+• PNP : sans récepteur, tu ajoutes le tien
+• ARF : presque prêt, quelques composants manquants
+• RTF : vraiment prêt à voler (souvent entrée de gamme)`},
+
+  {k:['météo','vent','condition','température','pluie','neige','froid','voler par'],r:`🌬️ MÉTÉO POUR VOLER
+
+✅ Conditions idéales :
+• Vent < 5 m/s (18 km/h) — freestyle parfait
+• Vent < 8 m/s (29 km/h) — vol possible avec expérience
+• Température > 10°C (LiPo moins performantes au froid)
+• Visibilité > 5 km, 0 précipitation
+
+⚠️ Acceptable :
+• Vent 8-12 m/s : pilotage actif, évite les obstacles proches
+• Froid < 5°C : chauffe les batteries dans ta poche avant vol
+
+❌ Ne pas voler :
+• Vent > 12 m/s ou rafales > 15 m/s
+• Pluie, bruine, neige (composants non étanches !)
+• Orage (foudre + interférences)
+• Brouillard (< 1km visibilité)
+
+💡 Utilise l'onglet Météo FPV pour le score de ta ville !`},
+];
+
+const FPV_FALLBACK=[
+  `❓ Je n'ai pas de réponse précise pour ça.
+
+💡 Essaie avec des mots-clés comme :
+• débuter, réglementation, AlphaTango
+• ELRS, radio, fréquence
+• Betaflight, PID, configuration
+• batterie, moteur, frame, stack
+• simulateur, uncrashed, liftoff
+• freestyle, racing, long range, cinématique
+• spots, voler, légal
+• soudure, réparer, problème
+
+📺 Pour aller plus loin :
+• Forum FPV France (fpv-france.fr)
+• r/fpv sur Reddit
+• Joshua Bardwell (YouTube) pour le technique`,
+  `🤔 Question hors de ma base FPV locale.
+
+Reformule avec : matériel, Betaflight, ELRS, simulateurs, spots, réglementation, construction, vidéo FPV, racing, freestyle, long range, batteries, moteurs, soudure…
+
+📱 Pour une IA généraliste : l'app Claude est gratuite !`,
+];
+
+function fpvSearch(input){
+  const q=input.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  let best=null,bestScore=0;
+  for(const entry of FPV_KB){
+    let score=0;
+    for(const kw of entry.k){
+      const k=kw.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      if(q.includes(k)) score+=(k.length>6?3:k.length>3?2:1);
+    }
+    if(score>bestScore){bestScore=score;best=entry;}
+  }
+  if(bestScore===0)return FPV_FALLBACK[Math.floor(Math.random()*FPV_FALLBACK.length)];
+  return best.r;
+}
+
+function buildIA(){
+  const qbar=document.getElementById('quick-bar');
+  QUICK_Q.forEach(q=>{
+    const btn=document.createElement('button');
+    btn.className='q-quick';btn.textContent=q;
+    btn.onclick=()=>sendChat(q);
+    qbar.appendChild(btn);
+  });
+  addMsg('bot','Salut ! Je suis ton assistant FPV 🚁\n\nBase locale : matériel, réglementation, Betaflight, ELRS, simulateurs, spots, construction, vidéo, racing, freestyle, long range…\n\n100% gratuit · aucune API · aucun coût 🔥\n\nPose ta question !');
+}
+
+function addMsg(role,text){
+  const area=document.getElementById('chat-area');
+  const div=document.createElement('div');
+  div.className=role==='user'?'msg-user':'msg-bot';
+  div.textContent=text;
+  area.appendChild(div);
+  area.scrollTop=area.scrollHeight;
+}
+
+function sendChat(override){
+  const inp=document.getElementById('chat-inp');
+  const txt=override||inp.value.trim();
+  if(!txt)return;
+  inp.value='';
+  addMsg('user',txt);
+  const area=document.getElementById('chat-area');
+  const typing=document.createElement('div');
+  typing.className='msg-bot';typing.id='fpv-typing';
+  typing.innerHTML='<span class="t-dots"><span></span><span></span><span></span></span>';
+  area.appendChild(typing);area.scrollTop=area.scrollHeight;
+  document.getElementById('chat-send-btn').disabled=true;
+  setTimeout(()=>{
+    document.getElementById('fpv-typing')?.remove();
+    addMsg('bot',fpvSearch(txt));
+    document.getElementById('chat-send-btn').disabled=false;
+  },100+Math.random()*250);
+}
+
+/* ════════════════════════════════════════════════════════════
+   INIT
+   ════════════════════════════════════════════════════════════ */
+(function init(){
+  buildNav();
+  buildChk();
+  buildSims();
+  buildGuide();
+  buildCfgSteps();cfgStep(0);
+  buildSpots();
+  buildIA();
+  // Pre-init weather map in background after page load
+  setTimeout(initWxMap,800);
+})();
+</script>
+</body>
+</html>
